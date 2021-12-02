@@ -9,14 +9,19 @@ fn main() {
     let lines = reader.lines().map(|x| x.unwrap());
 
     let mut forward = 0;
+    let mut aim = 0;
     let mut depth = 0;
 
     for l in lines{
 	let split: Vec<String> = l.split(' ').map(|s| s.to_string()).collect();
+	let value = split[1].parse().unwrap_or(0);
 	match split[0].as_str(){
-	    "forward"=>forward+=split[1].parse().unwrap_or(0),
-	    "down"=>depth+=split[1].parse().unwrap_or(0),
-	    "up"=>depth-=split[1].parse().unwrap_or(0),
+	    "forward"=>{
+		forward += value;
+		depth += value * aim;
+	    },
+	    "down"=> aim += value,
+	    "up"=> aim -= value,
 	    _=>println!("ERROR {} is not known", split[0]),
 	}
     }
