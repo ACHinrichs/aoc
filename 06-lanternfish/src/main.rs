@@ -6,9 +6,13 @@ use std::io::BufRead;
 fn main() {
     
     let file = File::open("input.txt").expect("file not found");
-    let lines = BufReader::new(file).lines().map(|x| x.unwrap()).collect::<Vec<String>>();
+    let lines = BufReader::new(file).lines()
+	.map(|x| x.unwrap())
+	.collect::<Vec<String>>();
 
-    let lanternfish = &lines[0].split(",").map(|x| x.parse::<i64>().unwrap_or(0)).collect::<Vec<i64>>();
+    let lanternfish = &lines[0].split(",")
+	.map(|x| x.parse::<i64>().unwrap_or(0))
+	.collect::<Vec<i64>>();
     let LIFETIME = 256;
     
     let mut offsets: Vec<u64>=vec![0;7];
@@ -22,9 +26,9 @@ fn main() {
     while generation <= LIFETIME{
 	let mut new_fish: Vec<u64>=next_new_fish;
 	next_new_fish=vec![0;7];
-	println!("{}", generation);
+	//println!("{}", generation);
 	for (offset, count) in offsets.iter().enumerate() {
-	    println!(" {} {}",offset, count);
+	    //println!(" {} {}",offset, count);
 	    if offset + 2 < 7 {
 		new_fish[(offset+2) as usize] = *count;
 	    } else {
@@ -39,16 +43,7 @@ fn main() {
 	    offsets[i] = offsets[i]+new_fish[i]
 	}
     }
-    /*
-    for i in 0..LIFETIME{
-	let (a,b): (Vec<i64>, Vec<i64>) = lanternfish.iter().map(|x| if x == &0 {(6, 8)} else {(x-1,-1)} ).unzip();
-	lanternfish = a.iter().map(|x| *x).chain(b.iter().map(|x| *x).filter(|x| x != &-1)).collect::<Vec<i64>>();
-	//println!("{:?}",lanternfish)
-	if i % 10 == 0 {
-	    println!("{}",i);
-	}
-    }
-     */
-
-    println!("Number of lanternfish after {} steps is {}", LIFETIME, offsets.iter().fold(0, |x,y| x+y));
+    println!("Number of lanternfish after {} steps is {}",
+	     LIFETIME,
+	     offsets.iter().fold(0, |x,y| x+y));
 }
