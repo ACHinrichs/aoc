@@ -112,11 +112,7 @@ fn main() {
                 i,
                 mapping.get(&i).expect("That really should be there")
             );
-            scrambled_to_number.insert(
-                mapping.get(&i).expect("That really should be there"), //.into_iter()
-                                                                       //.collect::<String>()
-                i,
-            );
+            scrambled_to_number.insert(mapping.get(&i).expect("That really should be there"), i);
         }
 
         let mut output_decoded = 0;
