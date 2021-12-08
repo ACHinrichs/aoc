@@ -9,6 +9,7 @@ fn main() {
 	.map(|x| x.unwrap())
 	.collect::<Vec<String>>();
     let mut p1_count = 0;
+    let mut p2_count = 0;
     
     for l in &lines{
 	let parts = l.split(" | ").collect::<Vec<&str>>();;
@@ -120,7 +121,8 @@ fn main() {
 				       ,
 				       i);
 	}
-
+	
+	let mut output_decoded = 0; 
 	for o in output_values{
 	    let mut o_chars = o.chars()
 		.collect::<Vec<char>>();
@@ -133,9 +135,13 @@ fn main() {
 		*scrambled_to_number.get(&o_chars).unwrap() == 8{
 		    p1_count += 1;
 		}
+	    output_decoded = output_decoded * 10 +
+		*scrambled_to_number.get(&o_chars).unwrap();
 	}
+	p2_count += output_decoded;
     }
     println!("p1_count is {}",p1_count);
+    println!("p2_count is {}",p2_count);
 }
 
 fn sorted_contains(a :&Vec<char>, b :&Vec<char>) -> bool{
