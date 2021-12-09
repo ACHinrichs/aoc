@@ -13,9 +13,12 @@ fn main() {
                 .collect()
         })
         .collect::<Vec<Vec<u32>>>();
-    println!("{:?}", ground);
 
-    let mut low_level_sum = 0;
+    println!("Low Level Sum (Part 1) is {}", low_level_sum(&ground));
+}
+
+fn low_level_sum(ground: &Vec<Vec<u32>>) -> u32 {
+    let mut low_level_sum: u32 = 0;
     for i in 0..ground.len() {
         for j in 0..ground[i].len() {
             if (i <= 0 || ground[i][j] < ground[i - 1][j])
@@ -27,5 +30,5 @@ fn main() {
             }
         }
     }
-    println!("Low Level Sum (Part 1) is {}", low_level_sum);
+    low_level_sum
 }
