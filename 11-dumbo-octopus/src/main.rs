@@ -1,11 +1,14 @@
 extern crate termion;
-use termion::{color, style};
+use termion::{color, cursor, clear};
 
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::{thread,time};
 
 fn main() {
+    let nice_visuals = true;
+
     let file = File::open("example.txt").expect("file not found");
     let mut grid = BufReader::new(file)
         .lines()
@@ -24,7 +27,11 @@ fn main() {
     let mut singularity_step = 0;
 
     for step in 1..=num_steps {
-        println!("\nStep {}\n", step);
+        if nice_visuals {
+            print!("{}{}", termion::clear::All, termion::cursor::Goto(2, 2));
+	    thread::sleep(time::Duration::from_millis(100));
+        }
+        println!("Step {}\n", step);
         currently_flashing = make_step(&mut grid);
         flash_count += currently_flashing;
         if currently_flashing == (grid.len() * grid[0].len()) as u64 {
@@ -33,7 +40,11 @@ fn main() {
     }
     let mut step = num_steps + 1;
     while singularity_step == 0 {
-        println!("\nStep {}\n", step);
+        if nice_visuals {
+            print!("{}{}", termion::clear::All, termion::cursor::Goto(2, 2));
+	    thread::sleep(time::Duration::from_millis(100));
+        }
+        println!("Step {}\n", step);
         currently_flashing = make_step(&mut grid);
         if currently_flashing == (grid.len() * grid[0].len()) as u64 {
             singularity_step = step;
@@ -42,7 +53,7 @@ fn main() {
         }
     }
     println!("Flash count after 100 Steps (Part 1) is {}", flash_count);
-    println!("All octopusses flash in step {}", singularity_step);
+    println!("All octopusses flash in step {} (Part 2)", singularity_step);
 }
 
 fn make_step(grid: &mut Vec<Vec<i64>>) -> u64 {
