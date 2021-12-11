@@ -31,7 +31,7 @@ fn main() {
             singularity_step = step;
         }
     }
-    let mut step = num_steps;
+    let mut step = num_steps + 1;
     while singularity_step == 0 {
         println!("\nStep {}\n", step);
         currently_flashing = make_step(&mut grid);
