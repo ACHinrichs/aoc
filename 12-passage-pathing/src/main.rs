@@ -1,18 +1,11 @@
-use petgraph::data::FromElements;
 use petgraph::dot::{Config, Dot};
-use petgraph::graph::{EdgeReference, Graph, NodeIndex};
-use petgraph::visit::{Bfs, EdgeRef};
+use petgraph::graph::{Graph, NodeIndex};
+use petgraph::visit::EdgeRef;
 
-use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-
-struct Cave {
-    name: String,
-    is_large: bool,
-}
 
 fn main() {
     let file = File::open("input.txt").expect("file not found");
@@ -49,10 +42,11 @@ fn main() {
     let start = node_index(&graph, &"start".to_string());
     let end = node_index(&graph, &"end".to_string());
 
-    fs::write(
+    let res = fs::write(
         "graph.dot",
         format!("{}", Dot::with_config(&graph, &[Config::EdgeNoLabel])),
     );
+    println!("graph.dot written with result {:?}", res);
 
     let paths = modified_dfs(&graph, start, end, None, &mut Vec::<NodeIndex>::new());
     println!("Number of paths is {}", paths)
