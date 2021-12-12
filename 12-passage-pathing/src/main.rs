@@ -91,11 +91,8 @@ fn modified_dfs(
                 }
             }) > 1)
     {
-        println!("returning from {:?}", s);
         return 0;
     }
-    //visited.push(s);
-    println!("{:?}", visited);
     let mut res = 0;
 
     if !is_upper(graph[s]) {
@@ -105,7 +102,6 @@ fn modified_dfs(
     for n in graph.edges(s) {
         res = res + modified_dfs(graph, n.target(), t, allow_double, visited);
         if allow_double.is_none() && visited.contains(&n.target()) {
-            println!("Allowing {:?}", n.target());
             res = res + modified_dfs(graph, n.target(), t, Some(n.target()), visited);
         }
     }
