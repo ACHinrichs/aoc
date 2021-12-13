@@ -1,4 +1,3 @@
-use regex::Match;
 use regex::Regex;
 use std::fs::File;
 use std::io::BufRead;
@@ -6,7 +5,7 @@ use std::io::BufReader;
 
 fn main() {
     let file = File::open("input.txt").expect("file not found");
-    let mut lines = &mut BufReader::new(file)
+    let lines = &mut BufReader::new(file)
         .lines()
         .map(|x| x.unwrap().to_string())
     //.collect::<Vec<String>>()
@@ -34,9 +33,6 @@ fn main() {
         }
     }
 
-    println!("{:?}", dots);
-    println!("{:?}", folds);
-
     for f in folds {
         dots = fold_paper(dots, f);
     }
@@ -46,8 +42,6 @@ fn main() {
 
     // Output ist nur dahingerotzt, wenn das nicht aoc wäre wprde ich das schöner machen
     let output_size = (40, 8);
-
-    println!("{:?} {}", dots, dots.len());
 
     for y in 0..=output_size.1 {
         for x in 0..=output_size.0 {
