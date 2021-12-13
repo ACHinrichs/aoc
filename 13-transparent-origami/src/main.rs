@@ -37,11 +37,29 @@ fn main() {
     println!("{:?}", dots);
     println!("{:?}", folds);
 
-    dots = fold_paper(dots, folds[0]);
-
+    for f in folds{
+	dots = fold_paper(dots, f);
+    }
+    // Has to be sorted to delete duplicates;
     dots.sort();
     dots.dedup();
+
+    // Output ist nur dahingerotzt, wenn das nicht aoc wäre wprde ich das schöner machen
+    let output_size = (40, 8);
+
     println!("{:?} {}", dots, dots.len());
+    
+    for y in 0..=output_size.1{
+	for x in 0..=output_size.0{
+	    if dots.contains(&(x,y)){
+		print!("█")
+	    } else {
+		print!(" ")
+	    }
+	}
+	println!("");
+    } 
+    
 }
 
 fn fold_paper(dots: Vec<(i64, i64)>, fold_along: (i64, i64)) -> Vec<(i64, i64)> {
