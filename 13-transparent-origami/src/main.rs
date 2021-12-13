@@ -37,8 +37,8 @@ fn main() {
     println!("{:?}", dots);
     println!("{:?}", folds);
 
-    for f in folds{
-	dots = fold_paper(dots, f);
+    for f in folds {
+        dots = fold_paper(dots, f);
     }
     // Has to be sorted to delete duplicates;
     dots.sort();
@@ -48,18 +48,17 @@ fn main() {
     let output_size = (40, 8);
 
     println!("{:?} {}", dots, dots.len());
-    
-    for y in 0..=output_size.1{
-	for x in 0..=output_size.0{
-	    if dots.contains(&(x,y)){
-		print!("█")
-	    } else {
-		print!(" ")
-	    }
-	}
-	println!("");
-    } 
-    
+
+    for y in 0..=output_size.1 {
+        for x in 0..=output_size.0 {
+            if dots.contains(&(x, y)) {
+                print!("█")
+            } else {
+                print!(" ")
+            }
+        }
+        println!("");
+    }
 }
 
 fn fold_paper(dots: Vec<(i64, i64)>, fold_along: (i64, i64)) -> Vec<(i64, i64)> {
