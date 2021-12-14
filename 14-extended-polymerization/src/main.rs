@@ -5,12 +5,12 @@ use std::io::BufReader;
 
 
 fn main() {
-    let file = File::open("example.txt").expect("file not found");
+    let file = File::open("input.txt").expect("file not found");
     let lines = &mut BufReader::new(file)
         .lines()
         .map(|x| x.unwrap().to_string());
 
-    let polymer_template_string: String = lines.nth(0).unwrap();
+    let mut elements: String = lines.nth(0).unwrap().to_string();
     assert_eq!(lines.nth(0).unwrap(),"");
     let mut rules = HashMap::new();
     for l in lines{
@@ -19,51 +19,32 @@ fn main() {
     }
     println!("{:?}", rules);
 
-    let mut pairs: Vec<(String, u64)> = Vec::new();
-    for i in 1..polymer_template_string.len(){
-	// How often the pair is already contained, failsafe 0 if not
-	let mut contained = false;
-	let pair = polymer_template_string[i-1..=i].to_string();
-	for i in 0..pairs.len(){
-	    if pairs[i].0 == pair {
-		contained = true;
-		pairs[i].1 += 1;
-	    }
-	}
-	if !contained {
-	    pairs.push((pair, 1));
-	}
-    }
-    println!("{:?}", pairs);
-
 
     // Do the polimerisation
     for _i in 0..10{
-	let mut new_pairs = Vec::new();
-    	for (p, count) in pairs.iter() {
+	let mut new_elements = elements[0..=0].to_string();
+	// Starting at 1 is correct, we are looking behind!
+    	for i in 1..elements.len() {
+	    let p = &elements[i-1..=i];
 	    if rules.contains_key(p) {
 		let rule_res = rules.get(p).unwrap();
-		add_to_value(&mut new_pairs,
-			     &(p[0..=0].to_string() + &rule_res.to_string()),
-			     *count);
-		add_to_value(&mut new_pairs,
-			     &(rule_res.to_string() + &p[1..=1].to_string()),
-			     *count);
-		//new_pairs.push((from.to_string(), 0));
+		new_elements = new_elements.to_owned() +
+		    //&elements[i-1..=i-1] +
+		    rule_res +
+		    &elements[i..=i];
 	    } else {
 		println!("Rule {} not found!", p);
 	    }
 	}
-	pairs = new_pairs;
-	println!("{:?}", pairs);
+	elements = new_elements.to_string();
+	println!("{}", elements);
     }
     // Count elements
     let mut counts: Vec<(String,u64)> = Vec::new();
-    for (k,v) in pairs{
-	add_to_value(&mut counts, &k[0..=0].to_string(), v);
-	add_to_value(&mut counts, &k[1..=1].to_string(), v);
+    for i in 0..elements.len(){
+	add_to_value(&mut counts, &elements[i..=i].to_string(), 1);
     }
-    counts.sort();
+    counts.sort_unstable_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     for (k,v) in counts{
 	println!("{} contained {} times",k,v);
     }
