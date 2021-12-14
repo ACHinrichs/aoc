@@ -5,7 +5,7 @@ use std::io::BufReader;
 
 
 fn main() {
-    let file = File::open("example.txt").expect("file not found");
+    let file = File::open("input.txt").expect("file not found");
     let lines = &mut BufReader::new(file)
         .lines()
         .map(|x| x.unwrap().to_string());
@@ -38,7 +38,7 @@ fn main() {
 
 
     // Do the polimerisation
-    for _i in 0..10{
+    for _i in 0..40{
 	let mut new_pairs = Vec::new();
     	for (p, count) in pairs.iter() {
 	    if rules.contains_key(p) {
@@ -59,14 +59,21 @@ fn main() {
     }
     // Count elements
     let mut counts: Vec<(String,u64)> = Vec::new();
+    // The first element stays the same, and we wont count it with the
+    // for loop, so add it manually
+    add_to_value(&mut counts, &polymer_template_string[0..=0], 1);
+    
     for (k,v) in pairs{
-	add_to_value(&mut counts, &k[0..=0].to_string(), v);
+	//add_to_value(&mut counts, &k[0..=0].to_string(), v);
+	//Only count the second elements, to not count some twice
 	add_to_value(&mut counts, &k[1..=1].to_string(), v);
     }
-    counts.sort();
-    for (k,v) in counts{
+    counts.sort_unstable_by(|a,b| a.1.partial_cmp(&b.1).unwrap());
+    for (k,v) in counts.iter(){
 	println!("{} contained {} times",k,v);
     }
+
+    println!("Result: {}", &counts[counts.len()-1].1-&counts[0].1);
 }
 
 fn add_to_value(vec: &mut Vec::<(String,u64)>, key: &str, value: u64){
