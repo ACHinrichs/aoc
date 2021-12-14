@@ -19,33 +19,65 @@ fn main() {
     }
     println!("{:?}", rules);
 
-    let mut pairs = HashMap::<String,u64>::new();
+    let mut pairs: Vec<(String, u64)> = Vec::new();
     for i in 1..polymer_template_string.len(){
 	// How often the pair is already contained, failsafe 0 if not
-	let count = pairs.get(&polymer_template_string[i-1..=i].to_string())
-	    .unwrap_or(&0);
-	pairs.insert(polymer_template_string[i-1..=i].to_string(), count + 1);
+	let mut contained = false;
+	let pair = polymer_template_string[i-1..=i].to_string();
+	for i in 0..pairs.len(){
+	    if pairs[i].0 == pair {
+		contained = true;
+		pairs[i].1 += 1;
+	    }
+	}
+	if !contained {
+	    pairs.push((pair, 1));
+	}
     }
     println!("{:?}", pairs);
 
 
     // Do the polimerisation
     for _i in 0..10{
-	let mut new_pairs = HashMap::<String, u64>::new();
-    	for (from, to) in rules.iter() {
-	    if pairs.contains_key(from){
-		let count = *pairs.get(from).unwrap_or(&0);
-		println!("{} contained {} times", from, count);
-		add_to_value(&mut pairs, &(from[0..=0].to_string() + to), count);
-		add_to_value(&mut pairs, &(from[1..=1].to_string() + to), count);
-		pairs.insert(from.to_string(), 0);
+	let mut new_pairs = Vec::new();
+    	for (p, count) in pairs.iter() {
+	    if rules.contains_key(p) {
+		let rule_res = rules.get(p).unwrap();
+		add_to_value(&mut new_pairs,
+			     &(p[0..=0].to_string() + &rule_res.to_string()),
+			     *count);
+		add_to_value(&mut new_pairs,
+			     &(rule_res.to_string() + &p[1..=1].to_string()),
+			     *count);
+		//new_pairs.push((from.to_string(), 0));
+	    } else {
+		println!("Rule {} not found!", p);
 	    }
 	}
+	pairs = new_pairs;
 	println!("{:?}", pairs);
     }
-
+    // Count elements
+    let mut counts: Vec<(String,u64)> = Vec::new();
+    for (k,v) in pairs{
+	add_to_value(&mut counts, &k[0..=0].to_string(), v);
+	add_to_value(&mut counts, &k[1..=1].to_string(), v);
+    }
+    counts.sort();
+    for (k,v) in counts{
+	println!("{} contained {} times",k,v);
+    }
 }
 
-fn add_to_value(map: &mut HashMap::<String,u64>, key: &str, value: u64){
-    map.insert(key.to_string(), value + map.get(key).unwrap_or(&0));
+fn add_to_value(vec: &mut Vec::<(String,u64)>, key: &str, value: u64){
+    let mut contained = false;
+    for i in 0..vec.len(){
+	if vec[i].0 == key {
+	    contained = true;
+	    vec[i].1 += value;
+	}
+    }
+    if !contained {
+	vec.push((key.to_string(), value));
+    }
 }
