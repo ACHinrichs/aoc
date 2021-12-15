@@ -1,4 +1,3 @@
-use std::cmp;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -21,24 +20,33 @@ fn main() {
 
     //Transform for part 2
     let part_2 = true;
-    if part_2{
-	//Duplicate lines 5 times
-	let input_lines = input_numbers.len();
-	for i in 1..=4{
-	    for line in 0..input_lines{
-		input_numbers.push(input_numbers[line].iter().map(|x| if (*x + i) <= 9 {x + i} else {x + i - 9} ).collect());
-	    }
-	}
-	for line in &mut input_numbers{
-	    let line_length = line.len();
-	    for i in 1..=4{
-		for j in 0..line_length{
-		    line.push(if line[j] + i <= 9 {line[j] + i} else {line[j] + i - 9});
-		}
-	    }
-	}
+    if part_2 {
+        //Duplicate lines 5 times
+        let input_lines = input_numbers.len();
+        for i in 1..=4 {
+            for line in 0..input_lines {
+                input_numbers.push(
+                    input_numbers[line]
+                        .iter()
+                        .map(|x| if (*x + i) <= 9 { x + i } else { x + i - 9 })
+                        .collect(),
+                );
+            }
+        }
+        for line in &mut input_numbers {
+            let line_length = line.len();
+            for i in 1..=4 {
+                for j in 0..line_length {
+                    line.push(if line[j] + i <= 9 {
+                        line[j] + i
+                    } else {
+                        line[j] + i - 9
+                    });
+                }
+            }
+        }
     }
-    
+
     let mut res_vec: Vec<Vec<i64>> = Vec::new();
     let mut mark_vec: Vec<Vec<bool>> = Vec::new();
     // init vec
@@ -89,7 +97,6 @@ fn main() {
         }
     }
     print_matrix(&res_vec);
-    
 }
 
 fn print_matrix(x: &Vec<Vec<i64>>) {
