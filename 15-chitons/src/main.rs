@@ -7,7 +7,7 @@ fn main() {
     let file = File::open("input.txt").expect("ERR: file not found!");
     let lines = BufReader::new(file).lines().map(|x| x.unwrap());
 
-    let input_numbers: Vec<Vec<i64>> = lines
+    let mut input_numbers: Vec<Vec<i64>> = lines
         .map(|y| {
             y.split("")
                 .filter(|s| !s.is_empty())
@@ -19,6 +19,26 @@ fn main() {
         })
         .collect();
 
+    //Transform for part 2
+    let part_2 = true;
+    if part_2{
+	//Duplicate lines 5 times
+	let input_lines = input_numbers.len();
+	for i in 1..=4{
+	    for line in 0..input_lines{
+		input_numbers.push(input_numbers[line].iter().map(|x| if (*x + i) <= 9 {x + i} else {x + i - 9} ).collect());
+	    }
+	}
+	for line in &mut input_numbers{
+	    let line_length = line.len();
+	    for i in 1..=4{
+		for j in 0..line_length{
+		    line.push(if line[j] + i <= 9 {line[j] + i} else {line[j] + i - 9});
+		}
+	    }
+	}
+    }
+    
     let mut res_vec: Vec<Vec<i64>> = Vec::new();
     let mut mark_vec: Vec<Vec<bool>> = Vec::new();
     // init vec
@@ -49,7 +69,7 @@ fn main() {
         let pos = coord_stack[0];
         coord_stack.remove(0);
         mark_vec[pos.0 as usize][pos.1 as usize] = true;
-        println!("{:?}", pos);
+        //println!("{:?}", pos);
         for d in directions {
             if 0 <= pos.0 + d.0
                 && pos.0 + d.0 < res_vec.len() as i64
@@ -69,6 +89,7 @@ fn main() {
         }
     }
     print_matrix(&res_vec);
+    
 }
 
 fn print_matrix(x: &Vec<Vec<i64>>) {
