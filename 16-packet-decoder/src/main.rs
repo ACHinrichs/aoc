@@ -50,26 +50,26 @@ fn parse_operator(packet: &[u8], type_id: u8) -> (u64, &[u8]) {
     if packet[0] == 0{
 	// Type 0, next 15 bits specify how long the subpackets that are contained arelet mut bits_used = 0;
 	let len_packets = packet[1..16].iter().fold(0, |a, b| b | a << 1);
-	let mut results = Vec::new();
+	let mut res = init_value;
 	let mut new_packets = &packet[16..];
 	let start_len = new_packets.len();
 	while new_packets.len() > start_len - len_packets as usize {
 	    let res_vec = parse_packet(new_packets);
 	    new_packets = res_vec.1;
-	    results.push(res_vec.0);
+	    res = operation(res, &res_vec.0);
 	}
-	return (results.iter().fold(init_value, operation), new_packets);
+	return (res, new_packets);
     } else {
 	// Type 1, next 11 bits specify how many subpackets there are
 	let num_packets = packet[1..12].iter().fold(0, |a, b| b | a << 1);
-	let mut results = Vec::new();
+	let mut res = init_value;
 	let mut new_packets = &packet[12..];
 	for _i in 0..num_packets{
 	    let res_vec = parse_packet(new_packets);
 	    new_packets = res_vec.1;
-	    results.push(res_vec.0);
+	    res = operation(res, &res_vec.0);
 	}
-	return (results.iter().fold(init_value, operation), new_packets);
+	return (res, new_packets);
     } 
 }
 
