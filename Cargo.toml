@@ -1,2 +1,2 @@
 [workspace]
-members = ["01-increase-count","02-dive","03-binary_diagnostic", "04-giant-squid", "05-hydrothermal-venture", "06-lanternfish", "07-traechery-of-whales", "08-seven-segment-search", "09-smoke-basin", "10-syntax-scoring", "11-dumbo-octopus", "12-passage-pathing", "13-transparent-origami", "14-extended-polymerization", "15-chitons", "16-packet-decoder", "17-trick-shot"]
+members = ["01-increase-count","02-dive","03-binary_diagnostic", "04-giant-squid", "05-hydrothermal-venture", "06-lanternfish", "07-traechery-of-whales", "08-seven-segment-search", "09-smoke-basin", "10-syntax-scoring", "11-dumbo-octopus", "12-passage-pathing", "13-transparent-origami", "14-extended-polymerization", "15-chitons", "16-packet-decoder", "17-trick-shot", "18-snailfish"]
