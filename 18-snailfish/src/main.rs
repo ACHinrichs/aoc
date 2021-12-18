@@ -98,7 +98,7 @@ impl SnailfishNumber {
 		loop {
 			let res = new_snailfish.explode_one(0);
 			new_snailfish = res.1.expect("Somethings fubar");
-			println!("{}", new_snailfish);
+			//println!("{}", new_snailfish);
 			//break;
 			if res.3 {
 				//Explode did some changes
@@ -106,7 +106,7 @@ impl SnailfishNumber {
 			}
 			let split_res = new_snailfish.split_one();
 			new_snailfish = split_res.0;
-			println!("{}", new_snailfish);
+			//println!("{}", new_snailfish);
 			if split_res.1 {
 				//Split did some changes
 				continue;
@@ -156,12 +156,12 @@ impl SnailfishNumber {
 	fn split_one(&self) -> (SnailfishNumber, bool) {
 		if self.is_regular {
 			if self.value >= 10 {
-				println!(
-					"Pair {} {} {} is split",
-					self,
-					self.left.is_some(),
-					self.right.is_some()
-				);
+				//println!(
+				//	"Pair {} {} {} is split",
+				//	self,
+				//	self.left.is_some(),
+				//	self.right.is_some()
+				//);
 				let left = SnailfishNumber {
 					is_regular: true,
 					left: None,
@@ -229,7 +229,7 @@ impl SnailfishNumber {
 		{
 			// Explode this
 			// »Exploding pairs will always consist of two regular numbers«
-			println!("Pair {} explodes!", self);
+			//println!("Pair {} explodes!", self);
 			return (
 				Some(self.left.as_ref().unwrap().value),
 				Some(SnailfishNumber {
@@ -353,9 +353,9 @@ fn main() {
 			}
 		})
 		.collect::<Vec<String>>();
-
-	if part == 1 {
-		println("Part 1");
+	
+	if part == 1{
+		println!("Part 1");
 		let res = lines
 			.iter()
 			.map(|x| SnailfishNumber::parse(x).0)
@@ -363,6 +363,22 @@ fn main() {
 			.unwrap();
 		println!("Result is {} with Magnitude {}", res, res.magnitude());
 	} else {
-		println("Part 2");
+		println!("Part 2");
+		let snailfish_numbers = lines
+			.iter()
+			.map(|x| SnailfishNumber::parse(x).0).collect::<Vec<SnailfishNumber>>();
+		let mut max = i64::MIN;
+		// Fucking bruteforce every good damn permutation
+		for i in 0..snailfish_numbers.len(){
+			for j in 0..snailfish_numbers.len(){
+				if i == j{
+					continue
+				}
+				max = std::cmp::max(max, SnailfishNumber::add(snailfish_numbers[i].clone(),
+															  snailfish_numbers[j].clone()).magnitude())
+			}
+			println!("{}/{}",i,snailfish_numbers.len()-1);
+		}
+		println!("Result for P2 is {}", max);
 	}
 }
