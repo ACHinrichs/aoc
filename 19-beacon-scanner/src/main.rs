@@ -67,29 +67,32 @@ impl Pointcloud {
 
 	fn merge_from(&mut self, cloud_b: &Pointcloud) -> bool {
 		// Find some correlating points, for this we hope that out data is nicely formed
-		let mut candidates_b = cloud_b.points.iter();
 		//let correlating = Vec::new();
 		let mut correlations = Vec::new();
-		println!("{:?}\n {:?}", self.points, cloud_b.points);
-		loop {
-			let candidate_b_optn = candidates_b.nth(0);
-			if candidate_b_optn.is_none() {
-				break;
-			}
-			let candidate_b = candidate_b_optn.unwrap();
-			let mut distances_b: Vec<f64> = cloud_b
+		println!("{} {}", self.points.len(), cloud_b.points.len());
+		//loop {
+		for candidate_a in self.points.iter() {
+			let mut distances_a = self
 				.points
 				.iter()
-				.map(|x| nalgebra::distance_squared(x, candidate_b)) // is faster
+				.map(|x| nalgebra::distance_squared(x, candidate_a)) // is faster
 				.collect::<Vec<f64>>();
-			distances_b.sort_by(|a, b| a.partial_cmp(b).unwrap());
-			for candidate_a in self.points.iter() {
-				let mut distances_a = self
+			distances_a.sort_by(|a, b| a.partial_cmp(b).unwrap());
+			//let candidate_b_optn = candidates_b.nth(0);
+			//if candidate_b_optn.is_none() {
+			//	break;
+			//}
+			//let candidate_b = candidate_b_optn.unwrap();
+			//println!("{:?}", candidate_a);
+			for candidate_b in cloud_b.points.iter() {
+				let mut distances_b: Vec<f64> = cloud_b
 					.points
 					.iter()
-					.map(|x| nalgebra::distance_squared(x, candidate_a)) // is faster
+					.map(|x| nalgebra::distance_squared(x, candidate_b)) // is faster
 					.collect::<Vec<f64>>();
-				distances_a.sort_by(|a, b| a.partial_cmp(b).unwrap());
+				distances_b.sort_by(|a, b| a.partial_cmp(b).unwrap());
+				//println!("{:?}", distances_a);
+				//println!("{:?}\n", distances_b);
 				let overlap_count =
 					count_overlap_sorted(&distances_a, &distances_b);
 				//Fortunately our input is well-formed, hence we can just take all pairs where there are 12 overlapping distances
@@ -99,70 +102,113 @@ impl Pointcloud {
 						candidate_a, candidate_b, overlap_count
 					);
 					correlations.push((candidate_a, candidate_b))
+				} else {
+					//println!("{} {} {}", self.points.len(), cloud_b.points.len(), overlap_count);
 				}
 			}
 		}
-
+		println!("{} Correlations", correlations.len());
+		if correlations.len() < 12 {
+			return false;
+		}
 		// We could do this smart, or we brute-force it. Since bruteforcing can be done
 		// in adequate time, I opt for letting my brain sleep
-		let scales = [
-			Point3::new(1.0, 1.0, 1.0),
-			Point3::new(1.0, 1.0, -1.0),
-			Point3::new(1.0, -1.0, 1.0),
-			Point3::new(1.0, -1.0, -1.0),
-			Point3::new(-1.0, 1.0, 1.0),
-			Point3::new(-1.0, 1.0, -1.0),
-			Point3::new(-1.0, -1.0, 1.0),
-			Point3::new(-1.0, -1.0, -1.0),
-		];
-		let mut final_scale: Point3<f64> = scales[0];
-		let mut final_transformation: Similarity3<f64> = Similarity3::new(
-			correlations[0].0 - comp_mul(final_scale, *correlations[0].1),
-			Vector3::new(0.0, 0.0, 0.0),
-			1.0,
-		);
-		'outermost: for scale in scales {
-			for rot_x in 0..4 {
-				for rot_y in 0..4 {
-					for rot_z in 0..4 {
-						let rotation = Vector3::new(
-							rot_x as f64 * std::f64::consts::PI,
-							rot_y as f64 * std::f64::consts::PI,
-							rot_z as f64 * std::f64::consts::PI,
-						);
-
-						let transformation = Similarity3::new(
-							correlations[0].0
-								- comp_mul(scale, *correlations[0].1),
-							rotation,
-							1.0,
-						);
-						if correlations.iter().all(|x| {
-							final_transformation = transformation;
-							final_scale = scale;
-							*x.0 == transformation
-								.transform_point(&(comp_mul(scale, *x.1)))
-						}) {
-							println!("FOUND");
-							break 'outermost;
-						} else {
+		//let mut final_scale: Point3<f64> = scales[0];
+		//let mut final_transformation: Similarity3<f64> = Similarity3::new(
+		//	correlations[0].0 - comp_mul(final_scale, *correlations[0].1),
+		//	Vector3::new(0.0, 0.0, 0.0),
+		//	1.0,
+		//);
+		let mut offset = Vector3::<f64>::new(0.0, 0.0, 0.0);
+		let mut transform_matrix =
+			Matrix3::<f64>::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+		let mut found_something = false;
+		'outermost: for axis in 0..3 {
+			for axis_direction in [1.0, -1.0] {
+				for axis_rotation in 0..4 {
+					transform_matrix = Matrix3::new(
+						1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+					);
+					let theta =
+						axis_rotation as f64 / 2.0 * std::f64::consts::PI;
+					let rot_matrix = Matrix2::new(
+						theta.cos().round(),
+						-theta.sin().round(),
+						theta.sin().round(),
+						theta.cos().round(),
+					);
+					let mut rotx = 0;
+					for i in 0..=2 {
+						if i == axis {
+							continue;
 						}
+						let mut roty = 0;
+						for j in 0..=2 {
+							if j == axis {
+								continue;
+							}
+							transform_matrix[(i, j)] = rot_matrix[(rotx, roty)];
+							roty += 1;
+						}
+						rotx += 1;
+					}
+					transform_matrix[(axis, axis)] = axis_direction;
+					if axis_direction < 0.0 && false {
+						let switch_pair = match axis {
+							0 => (1, 2),
+							1 => (0, 2),
+							2 => (1, 2),
+							_ => (0, 0),
+						};
+						for i in 0..3 {
+							let puf = transform_matrix[(i, switch_pair.0)];
+							transform_matrix[(i, switch_pair.0)] =
+								transform_matrix[(i, switch_pair.1)];
+							transform_matrix[(i, switch_pair.1)] = puf;
+						}
+					}
+
+					offset = correlations[0].0
+						- (transform_matrix * *correlations[0].1);
+					//println!("{}",transform_matrix);
+					//println!("{}",transform_matrix * correlations[0].1);
+					let count = correlations.iter().fold(0, |r, x| {
+						if nalgebra::distance_squared(
+							x.0,
+							&((transform_matrix * x.1) + offset),
+						) < 0.25
+						{
+							r + 1
+						} else {
+							r
+						}
+					});
+					println!("{}", count);
+					if count > 3 {
+						println!("FOUND, {} {}", transform_matrix, offset);
+						found_something = true;
+						break 'outermost;
+					} else {
 					}
 				}
 			}
 		}
-
+		if !found_something {
+			println!("Somethings fubar!");
+			//for c in correlations {
+			//	println!("{};{}", c.0, c.1)
+			//}
+			//return false;
+		}
 		let mut new_points = Vec::new();
 		new_points.extend(self.points.iter());
+		//new_points.extend(cloud_b.points.iter());
 		new_points.extend(
 			cloud_b
 				.points
 				.iter()
 				.filter(|y| correlations.iter().all(|x| x.1 != *y)) //Remove duplicats
-				.map(|x| {
-					final_transformation
-						.transform_point(&(comp_mul(final_scale, *x)))
-				}),
+				.map(|x| transform_matrix * x + offset),
 		);
 		self.points = new_points;
 		//self.points.dedup();
@@ -209,8 +255,21 @@ fn main() {
 			)));
 		}
 	}
-	let mut iter = pointclouds.iter();
-	let mut first = Pointcloud::from_points_ref(&iter.nth(0).unwrap().points);
-	let mut merged_cloud =
-		iter.filter(|x| !Pointcloud::merge_from(&mut first, &x));
+	pointclouds.push(Pointcloud::from_points(points));
+	//let mut iter = pointclouds.iter();
+	println!("We have {} scanners", pointclouds.len());
+	let mut first = Pointcloud::from_points_ref(&pointclouds[0].points);
+	let mut to_add = pointclouds;
+	to_add.remove(0);
+	while to_add.len() > 0 {
+		println!("Still {} to match", to_add.len());
+		let mut not_matched = Vec::new();
+		for cloud in to_add {
+			println!("{:?}", cloud.points);
+			if !first.merge_from(&cloud) {
+				not_matched.push(cloud);
+			}
+		}
+		to_add = not_matched;
+	}
 }
