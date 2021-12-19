@@ -83,7 +83,7 @@ impl Pointcloud {
 				.map(|x| nalgebra::distance_squared(x, candidate_b)) // is faster
 				.collect::<Vec<f64>>();
 			distances_b.sort_by(|a, b| a.partial_cmp(b).unwrap());
-			for candidate_a in &self.points.iter() {
+			for candidate_a in self.points.iter() {
 				let mut distances_a = self
 					.points
 					.iter()
@@ -152,9 +152,9 @@ impl Pointcloud {
 			}
 		}
 
-		//let mut new_points = Vec::new();
-		//new_points.extend(cloud_a.points.iter());
-		self.points.extend(
+		let mut new_points = Vec::new();
+		new_points.extend(self.points.iter());
+		new_points.extend(
 			cloud_b
 				.points
 				.iter()
@@ -164,7 +164,7 @@ impl Pointcloud {
 						.transform_point(&(comp_mul(final_scale, *x)))
 				}),
 		);
-		//self.points.sort_unstable();
+		self.points = new_points;
 		//self.points.dedup();
 		//println!("{:?}", new_points);
 		//Pointcloud::from_points(new_points)
@@ -210,7 +210,7 @@ fn main() {
 		}
 	}
 	let mut iter = pointclouds.iter();
-	let mut first = iter.nth(0).unwrap();
+	let mut first = Pointcloud::from_points_ref(&iter.nth(0).unwrap().points);
 	let mut merged_cloud =
 		iter.filter(|x| !Pointcloud::merge_from(&mut first, &x));
 }
