@@ -32,8 +32,9 @@ fn main() {
 	for i in 0..=2{
 		println!("\nIteration {}", i);
 		if i > 0{
-			image = enhance(image, &gorithm, 0);
-			fill = if fill == 1 {gorithm[8]} else {gorithm[0]};
+			image = enhance(image, &gorithm, fill);
+			fill = if fill == 1 {gorithm[0b111111111]} else {gorithm[0]};
+			println!("{}", fill);
 		}
 		println!("╔{}╗", "═".repeat(image.len()));
 		for l in image.iter() {
