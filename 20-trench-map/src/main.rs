@@ -3,7 +3,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 
 fn main() {
-	let file = File::open("example_input.txt").expect("file not found");
+	let file = File::open("input.txt").expect("file not found");
 	let lines = &mut BufReader::new(file)
 		.lines()
 		.map(|x| x.unwrap().to_string())
@@ -29,7 +29,7 @@ fn main() {
 		image.push(l.chars().map(parse_char).collect::<Vec<i64>>());
 	}
 	let mut fill = 0;
-	for i in 0..=2{
+	for i in 0..=50{
 		println!("\nIteration {}", i);
 		if i > 0{
 			image = enhance(image, &gorithm, fill);
