@@ -72,36 +72,35 @@ impl Pointcloud {
 		println!("{} {}", self.points.len(), cloud_b.points.len());
 		//loop {
 		for candidate_a in self.points.iter() {
-			let mut distances_a = self
-				.points
-				.iter()
-				.map(|x| nalgebra::distance_squared(x, candidate_a)) // is faster
-				.collect::<Vec<f64>>();
-			distances_a.sort_by(|a, b| a.partial_cmp(b).unwrap());
-			//let candidate_b_optn = candidates_b.nth(0);
-			//if candidate_b_optn.is_none() {
-			//	break;
-			//}
-			//let candidate_b = candidate_b_optn.unwrap();
-			//println!("{:?}", candidate_a);
 			for candidate_b in cloud_b.points.iter() {
-				let mut distances_b: Vec<f64> = cloud_b
-					.points
-					.iter()
-					.map(|x| nalgebra::distance_squared(x, candidate_b)) // is faster
-					.collect::<Vec<f64>>();
-				distances_b.sort_by(|a, b| a.partial_cmp(b).unwrap());
-				//println!("{:?}", distances_a);
-				//println!("{:?}\n", distances_b);
-				let overlap_count =
-					count_overlap_sorted(&distances_a, &distances_b);
-				//Fortunately our input is well-formed, hence we can just take all pairs where there are 12 overlapping distances
-				if overlap_count >= 12 {
+				let mut aligned = Vec::new();
+				for chck_a in self.points.iter(){
+					if chck_a == candidate_a {
+						continue;
+					}
+					let dist_a = nalgebra::distance_squared(chck_a, candidate_a);
+					for chck_b in cloud_b.points.iter(){
+						if chck_b == candidate_b{
+							continue;
+						}
+						let dist_b = nalgebra::distance_squared(chck_b, candidate_b);
+						if dist_a == dist_b {
+							aligned.push((chck_a, chck_b));
+						} else if dist_a - dist_b < 0.5 && dist_b - dist_a < 0.5  {
+							assert!(false);
+							println!("Yeah, you're just retarded, thats why it didnt work");
+						}
+					}
+				}
+				let overlap_count = aligned.len() + 1;
+				if overlap_count >= 6 {
 					println!(
 						"{} and {} have {} overlaps",
 						candidate_a, candidate_b, overlap_count
 					);
-					correlations.push((candidate_a, candidate_b))
+					correlations.push((candidate_a, candidate_b));
+					correlations.extend(aligned.iter());
+					break;
 				} else {
 					//println!("{} {} {}", self.points.len(), cloud_b.points.len(), overlap_count);
 				}
@@ -138,6 +137,7 @@ impl Pointcloud {
 						theta.cos().round(),
 					);
 					let mut rotx = 0;
+					
 					for i in 0..=2 {
 						if i == axis {
 							continue;
@@ -153,7 +153,7 @@ impl Pointcloud {
 						rotx += 1;
 					}
 					transform_matrix[(axis, axis)] = axis_direction;
-					if axis_direction < 0.0 && false {
+					if axis_direction < 0.0 {
 						let switch_pair = match axis {
 							0 => (1, 2),
 							1 => (0, 2),
@@ -170,8 +170,6 @@ impl Pointcloud {
 
 					offset = correlations[0].0
 						- (transform_matrix * *correlations[0].1);
-					//println!("{}",transform_matrix);
-					//println!("{}",transform_matrix * correlations[0].1);
 					let count = correlations.iter().fold(0, |r, x| {
 						if nalgebra::distance_squared(
 							x.0,
@@ -184,7 +182,7 @@ impl Pointcloud {
 						}
 					});
 					println!("{}", count);
-					if count > 3 {
+					if count > 12 {
 						println!("FOUND, {} {}", transform_matrix, offset);
 						found_something = true;
 						break 'outermost;
@@ -272,4 +270,6 @@ fn main() {
 		}
 		to_add = not_matched;
 	}
+
+	println!("Number of points is: {}", first.points.len());
 }
