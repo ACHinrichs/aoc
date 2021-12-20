@@ -3,7 +3,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 
 fn main() {
-	let file = File::open("input.txt").expect("file not found");
+	let file = File::open("example_input.txt").expect("file not found");
 	let lines = &mut BufReader::new(file)
 		.lines()
 		.map(|x| x.unwrap().to_string())
@@ -32,17 +32,19 @@ fn main() {
 		if i > 0{
 			image = enhance(image, &gorithm);
 		}
+		println!("╔{}╗", "═".repeat(image.len()));
 		for l in image.iter() {
+			print!("║");
 			for c in l{
 				print!("{}", match *c {1 => "█", 0 => " ", _ => "E"});
 			}
-			println!("")
+			println!("║");
 		}
+		println!("╚{}╝", "═".repeat(image.len()));
+		println!("Count of light pixels is {}",
+				 image.iter().fold(0,
+								   |res, x| res + x.iter().fold(0, |inner_res, y| inner_res + y)));
 	}
-
-	println!("Count of light pixels (Sol. for P1): {}",
-			 image.iter().fold(0,
-							   |res, x| res + x.iter().fold(0, |inner_res, y| inner_res + y)));
 	
 }
 
