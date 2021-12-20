@@ -3,7 +3,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 
 fn main() {
-	let file = File::open("example.txt").expect("file not found");
+	let file = File::open("input.txt").expect("file not found");
 	let lines = &mut BufReader::new(file)
 		.lines()
 		.map(|x| x.unwrap().to_string())
@@ -52,10 +52,10 @@ fn enhance(inp: Vec<Vec<i64>>, gorithm: &Vec<i64>) -> Vec<Vec<i64>>{
 	// These bounds are important, since we enlarge the image by 1 row and
 	// coloum in each direction
 	for i_iter in 0..inp.len()+2{
-		let i = i_iter as i64 -1;
+		let i = i_iter as i64 - 1;
 		let mut row = Vec::new();
-		for j_iter in 0..inp[0].len()+2{
-			let j = j_iter as i64 -1;
+		for j_iter in 0..inp[0].len() + 2{
+			let j = j_iter as i64 - 1;
 			let mut gorithm_index: usize = 0;
 			for offset_i in [-1,0,1]{
 				for offset_j in [-1,0,1]{
