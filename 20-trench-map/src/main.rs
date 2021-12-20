@@ -34,7 +34,7 @@ fn main() {
 		}
 		for l in image.iter() {
 			for c in l{
-				print!("{}", if *c == 1 {"█"} else {" "});
+				print!("{}", match *c {1 => "█", 0 => " ", _ => "E"});
 			}
 			println!("")
 		}
@@ -50,7 +50,7 @@ fn main() {
 fn enhance(inp: Vec<Vec<i64>>, gorithm: &Vec<i64>) -> Vec<Vec<i64>>{
 	let mut res = Vec::new();
 	// These bounds are important, since we enlarge the image by 1 row and
-	// coloum in each direction
+	// column in each direction
 	for i_iter in 0..inp.len()+2{
 		let i = i_iter as i64 - 1;
 		let mut row = Vec::new();
