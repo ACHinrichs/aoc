@@ -1,7 +1,7 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-
 trait Die {
 	fn roll(&mut self) -> u64;
 }
@@ -24,48 +24,111 @@ impl Die for DeterministicDie {
 	}
 }
 
-let mut_finished_runs: u64 = 0;
-// This is not really nice, but works :shrug:
+static mut finished_runs: u64 = 0;
+static mut from_hashmap: u64 = 0;
+
+static winning_score: u64 = 21;
+
+fn get_wins(
+	points: Vec<u64>,
+	positions: Vec<u64>,
+	cur_player: usize,
+	known_configurations: &mut HashMap<(Vec<u64>, Vec<u64>, usize), Vec<u64>>,
+) -> Vec<u64> {
+	// points and positions are the state __after__ cur_player made his move
+	let map_entry = known_configurations.get(&(
+		points.clone(),
+		positions.clone(),
+		(cur_player + 1) % points.len(),
+	));
+	if map_entry.is_some() {
+		unsafe {
+			finished_runs += 1;
+			from_hashmap += 1;
+			if finished_runs % 1_000 == 0 {
+				println!("Already finished {} games ({} from Hashmap), HashMap-Size is {}", finished_runs, from_hashmap, known_configurations.len());
+			}
+		}
+		return map_entry.unwrap().clone();
+	} else {
+		let mut res = Vec::new();
+		if points[cur_player] >= winning_score {
+			for i in 0..points.len() {
+				res.push(if i == cur_player { 1 } else { 0 });
+			}
+			unsafe {
+				finished_runs += 1;
+				if finished_runs % 1_000 == 0 {
+					println!(
+						"Already finished {} games, HashMap-Size is {}",
+						finished_runs,
+						known_configurations.len()
+					);
+				}
+			}
+		} else {
+			res = play_quantum(
+				points.clone(),
+				positions.clone(),
+				(cur_player + 1) % points.len(),
+				known_configurations,
+			);
+		}
+		known_configurations.insert(
+			(
+				points.clone(),
+				positions.clone(),
+				(cur_player + 1) % points.len(),
+			),
+			res.clone(),
+		);
+		return res;
+	}
+}
+
 fn play_quantum(
 	points: Vec<u64>,
 	positions: Vec<u64>,
 	cur_player: usize,
+	known_configurations: &mut HashMap<(Vec<u64>, Vec<u64>, usize), Vec<u64>>,
 ) -> Vec<u64> {
 	let possible_rolls = [1, 2, 3];
-	let winning_score = 21;
+
 	let mut res = Vec::new();
 	//println!("{:?}", points);
 	for p in points.clone() {
 		res.push(p);
 	}
+	//for roll in [3,4,5,6,7,8,9] {
 	for roll1 in possible_rolls {
 		for roll2 in possible_rolls {
 			for roll3 in possible_rolls {
+				let roll = roll1 + roll2 + roll3;
+
 				let mut points_tmp = points.clone();
 				let mut positions_tmp = positions.clone();
+
 				positions_tmp[cur_player] =
-					(positions_tmp[cur_player] + roll1 + roll2 + roll3) % 10;
+					(positions_tmp[cur_player] + roll) % 10;
 				points_tmp[cur_player] += positions_tmp[cur_player] + 1;
-				if points_tmp[cur_player] >= winning_score {
-					res[cur_player] += 1;
-					finished_runs += 1;
-					if finished_runs % 1000 == 0{
-						println!("Already finished {} games", finished_runs);
-					}
-					continue;
-				}
-				res = res.iter().zip(play_quantum(
+
+				let subtree_res = get_wins(
 					points_tmp,
 					positions_tmp,
-					(cur_player + 1) % points.len(),
-				)).map(|(x,y)| x + y).collect();
-			
+					cur_player,
+					known_configurations,
+				);
+
+				res = res.iter().zip(subtree_res).map(|(x, y)| x + y).collect();
 			}
 		}
 	}
 	//if res[cur_player] % 100000 == 0{
 	//	println!("Player {} has won in {} Universes",cur_player, res[cur_player] )
 	//}
+	//println!("{:?}, {:?}, {:?}",positions.clone(),
+	//							 points.clone(),
+	//							 cur_player );
 	return res;
 }
 
@@ -116,10 +179,14 @@ fn main() {
 		);
 	} else {
 		println!("Playing the Quantum-Version.");
-		let winning_universes = play_quantum(points, positions, 0);
+		let winning_universes =
+			play_quantum(points, positions, 0, &mut HashMap::new());
 		println!("Done");
-		for p in 0..winning_universes.len(){
-			println!("Player {} winns in {} universes.", p, winning_universes[p]);
+		for p in 0..winning_universes.len() {
+			println!(
+				"Player {} winns in {} universes.",
+				p, winning_universes[p]
+			);
 		}
 	}
 }
