@@ -5,11 +5,18 @@ use std::io::BufRead;
 use std::io::BufReader;
 
 struct Pointcloud {
-	points: Vec<Point3<f64>>,
+	points: Vec<Point3<i64>>,
+}
+
+fn distance_squared(a: &Point3<i64>, b: &Point3<i64>) -> i64 {
+	return (b.x - a.x).pow(2) + (b.y - a.y).pow(2) + (b.z - a.z).pow(2);
+}
+fn manhattan_distance(a: &Point3<i64>, b: &Point3<i64>) -> i64 {
+	return (b.x - a.x).abs() + (b.y - a.y).abs() + (b.z - a.z).abs();
 }
 
 impl Pointcloud {
-	fn from_points_ref(points_ref: &Vec<Point3<f64>>) -> Pointcloud {
+	fn from_points_ref(points_ref: &Vec<Point3<i64>>) -> Pointcloud {
 		let mut points = Vec::new();
 		for p in points_ref.iter() {
 			points.push(*p);
@@ -17,7 +24,7 @@ impl Pointcloud {
 		Pointcloud { points: points }
 	}
 
-	fn from_points(points: Vec<Point3<f64>>) -> Pointcloud {
+	fn from_points(points: Vec<Point3<i64>>) -> Pointcloud {
 		Pointcloud { points: points }
 	}
 
@@ -28,19 +35,15 @@ impl Pointcloud {
 		for (seed_a, seed_b) in
 			self.points.iter().cartesian_product(cloud_b.points.iter())
 		{
-			let distances_a = self
-				.points
-				.iter()
-				.map(|x| nalgebra::distance_squared(x, seed_a));
-			let distances_b = cloud_b
-				.points
-				.iter()
-				.map(|x| nalgebra::distance_squared(x, seed_b));
+			let distances_a =
+				self.points.iter().map(|x| distance_squared(x, seed_a));
+			let distances_b =
+				cloud_b.points.iter().map(|x| distance_squared(x, seed_b));
 			// Could be done more efficently, but for now i just want a solution tbqf
 			let correlating = distances_a
 				.cartesian_product(distances_b)
 				.filter(|p| p.0 == p.1)
-				.collect::<Vec<(f64, f64)>>();
+				.collect::<Vec<(i64, i64)>>();
 			if correlating.len() >= 12 {
 				correlations.push((seed_a, seed_b));
 				//println!("ADDED ONE");
@@ -69,24 +72,23 @@ impl Pointcloud {
 		let mut offset = correlations[0].0 - correlations[0].1;
 		//assert!(correlations.iter().all(|x| *x.0 == x.1 - offset));
 		let mut transform_matrix =
-			Matrix3::<f64>::new(2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+			Matrix3::<i64>::new(0, 0, 0, 0, 0, 0, 0, 0, 0);
 
 		'outer: for x_maps_to in [0, 1, 2] {
-			for x_sign in [-1.0, 1.0] {
+			for x_sign in [-1, 1] {
 				'y_map: for y_maps_to in [0, 1, 2] {
 					if y_maps_to == x_maps_to {
 						continue 'y_map;
 					}
-					for y_sign in [-1.0, 1.0] {
+					for y_sign in [-1, 1] {
 						let z_maps_to = match (x_maps_to, y_maps_to) {
 							(0, 1) | (1, 0) => 2,
 							(0, 2) | (2, 0) => 1,
 							_ => 0,
 						};
-						for z_sign in [-1.0, 1.0] {
-							transform_matrix = Matrix3::new(
-								0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-							);
+						for z_sign in [-1, 1] {
+							transform_matrix =
+								Matrix3::new(0, 0, 0, 0, 0, 0, 0, 0, 0);
 							transform_matrix[(x_maps_to, 0)] = x_sign;
 							transform_matrix[(y_maps_to, 1)] = y_sign;
 							transform_matrix[(z_maps_to, 2)] = z_sign;
@@ -159,8 +161,8 @@ fn main() {
 				points = Vec::new();
 			}
 		} else {
-			let components: Vec<f64> =
-				l.split(",").map(|x| x.parse::<f64>().unwrap()).collect();
+			let components: Vec<i64> =
+				l.split(",").map(|x| x.parse::<i64>().unwrap()).collect();
 			points.push(Point::from(vector!(
 				components[0],
 				components[1],
