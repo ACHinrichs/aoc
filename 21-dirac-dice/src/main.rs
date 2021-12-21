@@ -97,7 +97,7 @@ fn play_quantum(
 	let mut res = Vec::new();
 	//println!("{:?}", points);
 	for p in points.clone() {
-		res.push(p);
+		res.push(0);
 	}
 	//for roll in [3,4,5,6,7,8,9] {
 	for roll1 in possible_rolls {
