@@ -1,45 +1,11 @@
+use itertools::Itertools;
 use nalgebra::*;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+
 struct Pointcloud {
 	points: Vec<Point3<f64>>,
-	//position: Vector3<f64>,
-	//rotation: Rotation3<f64>,
-	//fixed: bool
-}
-
-fn count_overlap_sorted(a: &Vec<f64>, b: &Vec<f64>) -> i64 {
-	if a.len() == 0 || b.len() == 0 {
-		return 0;
-	}
-	let mut res = 0;
-	let mut iter_a = a.iter();
-	let mut elem_a = iter_a.nth(0).unwrap();
-	for elem_b in b.iter() {
-		while elem_b > elem_a {
-			let elem_a_optn = iter_a.nth(0);
-			if elem_a_optn.is_some() {
-				elem_a = elem_a_optn.unwrap();
-			} else {
-				break;
-			}
-		}
-		if elem_a == elem_b {
-			res += 1;
-			let elem_a_optn = iter_a.nth(0);
-			if elem_a_optn.is_some() {
-				elem_a = elem_a_optn.unwrap();
-			} else {
-				break;
-			}
-		}
-	}
-	res
-}
-
-fn comp_mul(a: Point3<f64>, b: Point3<f64>) -> Point3<f64> {
-	Point3::new(a.x * b.x, a.y * b.y, a.z * b.z)
 }
 
 impl Pointcloud {
@@ -48,156 +14,153 @@ impl Pointcloud {
 		for p in points_ref.iter() {
 			points.push(*p);
 		}
-		Pointcloud {
-			points: points,
-			//position: Vector3::new(0.0, 0.0, 0.0),
-			//rotation: Rotation3::new(vector!(0.0, 0.0, 0.0)),
-			//fixed: false,
-		}
+		Pointcloud { points: points }
 	}
 
 	fn from_points(points: Vec<Point3<f64>>) -> Pointcloud {
-		Pointcloud {
-			points: points,
-			//position: Vector3::new(0.0, 0.0, 0.0),
-			//rotation: Rotation3::new(vector!(0.0, 0.0, 0.0)),
-			//fixed: false,
-		}
+		Pointcloud { points: points }
 	}
 
 	fn merge_from(&mut self, cloud_b: &Pointcloud) -> bool {
 		// Find some correlating points, for this we hope that out data is nicely formed
-		//let correlating = Vec::new();
 		let mut correlations = Vec::new();
-		println!("{} {}", self.points.len(), cloud_b.points.len());
-		//loop {
-		for candidate_a in self.points.iter() {
-			for candidate_b in cloud_b.points.iter() {
-				let mut aligned = Vec::new();
-				for chck_a in self.points.iter(){
-					if chck_a == candidate_a {
-						continue;
-					}
-					let dist_a = nalgebra::distance_squared(chck_a, candidate_a);
-					for chck_b in cloud_b.points.iter(){
-						if chck_b == candidate_b{
-							continue;
-						}
-						let dist_b = nalgebra::distance_squared(chck_b, candidate_b);
-						if dist_a == dist_b {
-							aligned.push((chck_a, chck_b));
-						} else if dist_a - dist_b < 0.5 && dist_b - dist_a < 0.5  {
-							assert!(false);
-							println!("Yeah, you're just retarded, thats why it didnt work");
-						}
-					}
-				}
-				let overlap_count = aligned.len() + 1;
-				if overlap_count >= 6 {
-					println!(
-						"{} and {} have {} overlaps",
-						candidate_a, candidate_b, overlap_count
-					);
-					correlations.push((candidate_a, candidate_b));
-					correlations.extend(aligned.iter());
-					break;
-				} else {
-					//println!("{} {} {}", self.points.len(), cloud_b.points.len(), overlap_count);
-				}
-			}
+		// Iter over all possible initial correlations
+		for (seed_a, seed_b) in
+			self.points.iter().cartesian_product(cloud_b.points.iter())
+		{
+			let distances_a = self
+				.points
+				.iter()
+				.map(|x| nalgebra::distance_squared(x, seed_a));
+			let distances_b = cloud_b
+				.points
+				.iter()
+				.map(|x| nalgebra::distance_squared(x, seed_b));
+			// Could be done more efficently, but for now i just want a solution tbqf
+			let correlating = distances_a
+				.cartesian_product(distances_b)
+				.filter(|p| p.0 == p.1)
+				.collect::<Vec<(f64, f64)>>();
+			if correlating.len() >= 12 {
+				correlations.push((seed_a, seed_b));
+				//println!("ADDED ONE");
+			} /* else {
+				 if correlating.len() > 2 {
+					 println!("{}", correlating.len());
+				 }
+			 }*/
 		}
-		println!("{} Correlations", correlations.len());
-		if correlations.len() < 12 {
+
+		if correlations.len() > 0 {
+			println!("{} Correlations", correlations.len());
+		} else {
+			println!(
+				"You only got {} correlations, thats not quite enough",
+				correlations.len()
+			);
 			return false;
 		}
+		// If we have come this far, there __has__ to exist a transformation and offset
+		// such that this stuff aligns
+
 		// We could do this smart, or we brute-force it. Since bruteforcing can be done
 		// in adequate time, I opt for letting my brain sleep
-		//let mut final_scale: Point3<f64> = scales[0];
-		//let mut final_transformation: Similarity3<f64> = Similarity3::new(
-		//	correlations[0].0 - comp_mul(final_scale, *correlations[0].1),
-		//	Vector3::new(0.0, 0.0, 0.0),
-		//	1.0,
-		//);
-		let mut offset = Vector3::<f64>::new(0.0, 0.0, 0.0);
+		let mut found_something = false;
+		let mut offset = correlations[0].0 - correlations[0].1;
+		//assert!(correlations.iter().all(|x| *x.0 == x.1 - offset));
 		let mut transform_matrix =
 			Matrix3::<f64>::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
-		let mut found_something = false;
 		'outermost: for axis in 0..3 {
 			for axis_direction in [1.0, -1.0] {
-				for axis_rotation in 0..4 {
-					transform_matrix = Matrix3::new(
-						1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
-					);
-					let theta =
-						axis_rotation as f64 / 2.0 * std::f64::consts::PI;
-					let rot_matrix = Matrix2::new(
-						theta.cos().round(),
-						-theta.sin().round(),
-						theta.sin().round(),
-						theta.cos().round(),
-					);
-					let mut rotx = 0;
-					
-					for i in 0..=2 {
-						if i == axis {
-							continue;
-						}
-						let mut roty = 0;
-						for j in 0..=2 {
-							if j == axis {
+				for only_mirror in [true, false] {
+					for axis_rotation in 0..4 {
+						transform_matrix = Matrix3::new(
+							1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+						);
+						let theta =
+							axis_rotation as f64 / 2.0 * std::f64::consts::PI;
+						let rot_matrix = Matrix2::new(
+							theta.cos().round(),
+							-(theta.sin().round()),
+							theta.sin().round(),
+							theta.cos().round(),
+						);
+						//println!("{}", rot_matrix);
+						let mut rotx = 0;
+
+						for i in 0..=2 {
+							if i == axis {
 								continue;
 							}
-							transform_matrix[(i, j)] = rot_matrix[(rotx, roty)];
-							roty += 1;
+							let mut roty = 0;
+							for j in 0..=2 {
+								if j == axis {
+									continue;
+								}
+								transform_matrix[(i, j)] =
+									rot_matrix[(rotx, roty)];
+								roty += 1;
+							}
+							rotx += 1;
 						}
-						rotx += 1;
-					}
-					transform_matrix[(axis, axis)] = axis_direction;
-					if axis_direction < 0.0 {
-						let switch_pair = match axis {
-							0 => (1, 2),
-							1 => (0, 2),
-							2 => (1, 2),
-							_ => (0, 0),
-						};
-						for i in 0..3 {
-							let puf = transform_matrix[(i, switch_pair.0)];
-							transform_matrix[(i, switch_pair.0)] =
-								transform_matrix[(i, switch_pair.1)];
-							transform_matrix[(i, switch_pair.1)] = puf;
-						}
-					}
 
-					offset = correlations[0].0
-						- (transform_matrix * *correlations[0].1);
-					let count = correlations.iter().fold(0, |r, x| {
-						if nalgebra::distance_squared(
-							x.0,
-							&((transform_matrix * x.1) + offset),
-						) < 0.25
-						{
-							r + 1
+						// Switch the two axis around when we are looking into the other direction
+						let mut flip_matrix = Matrix3::new(
+							1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+						);
+						if axis_direction < 0.0 && !only_mirror {
+							let neg_axis = match axis {
+								0 => [0, 2],
+								1 => [0, 1],
+								2 => [1, 2],
+								_ => [0, 0],
+							};
+							for ax in neg_axis {
+								flip_matrix[(ax, ax)] = axis_direction;
+							}
 						} else {
-							r
+							flip_matrix[(axis, axis)] = axis_direction;
 						}
-					});
-					println!("{}", count);
-					if count > 12 {
-						println!("FOUND, {} {}", transform_matrix, offset);
-						found_something = true;
-						break 'outermost;
-					} else {
+						transform_matrix = transform_matrix * flip_matrix;
+						offset = correlations[0].0
+							- (transform_matrix * *correlations[0].1);
+
+						let count = correlations.iter().fold(0, |r, x| {
+							if nalgebra::distance_squared(
+								x.0,
+								&((transform_matrix * x.1) + offset),
+							) < 0.25
+							{
+								r + 1
+							} else {
+								r
+							}
+						});
+						//println!("{}", count);
+						if count >= 12 {
+							println!("FOUND");
+							found_something = true;
+							//println!("")
+							break 'outermost;
+						} else {
+							if count > 0 {
+								println!(
+									"{}/{} are matching",
+									count,
+									correlations.len()
+								)
+							}
+						}
 					}
 				}
 			}
 		}
 		if !found_something {
 			println!("Somethings fubar!");
-			//for c in correlations {
-			//	println!("{};{}", c.0, c.1)
-			//}
-			//return false;
 		}
+		assert!(correlations
+			.iter()
+			.all(|x| *x.0 == (transform_matrix * x.1) + offset));
 		let mut new_points = Vec::new();
 		new_points.extend(self.points.iter());
 		//new_points.extend(cloud_b.points.iter());
@@ -263,7 +226,7 @@ fn main() {
 		println!("Still {} to match", to_add.len());
 		let mut not_matched = Vec::new();
 		for cloud in to_add {
-			println!("{:?}", cloud.points);
+			//println!("{:?}", cloud.points);
 			if !first.merge_from(&cloud) {
 				not_matched.push(cloud);
 			}
