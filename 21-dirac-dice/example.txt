@@ -1,2 +1,4 @@
 Player 1 starting position: 4
+// Score p1: 444_356_092_776_315
 Player 2 starting position: 8
+// Score p2: 341_960_390_180_808

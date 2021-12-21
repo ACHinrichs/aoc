@@ -45,7 +45,7 @@ fn get_wins(
 		unsafe {
 			finished_runs += 1;
 			from_hashmap += 1;
-			if finished_runs % 1_000 == 0 {
+			if finished_runs % 10_000 == 0 {
 				println!("Already finished {} games ({} from Hashmap), HashMap-Size is {}", finished_runs, from_hashmap, known_configurations.len());
 			}
 		}
@@ -63,6 +63,16 @@ fn get_wins(
 				(cur_player + 1) % points.len(),
 				known_configurations,
 			);
+		}
+		unsafe {
+			finished_runs += 1;
+			if finished_runs % 10_000 == 0 {
+				println!(
+					"Already finished {} games, HashMap-Size is {}",
+					finished_runs,
+					known_configurations.len()
+				);
+			}
 		}
 		known_configurations.insert(
 			(
@@ -124,14 +134,14 @@ fn play_quantum(
 
 fn main() {
 	let part = 2;
-	let file = File::open("example.txt").expect("file not found");
+	let file = File::open("input.txt").expect("file not found");
 	let mut positions = BufReader::new(file)
 		.lines()
 		.map(|x| x.unwrap().to_string())
 		.filter(|x| {
 			if x.starts_with("//") {
 				//Filter comments
-				println!("Found comment in input: {}", &x[2..]);
+				//println!("Found comment in input: {}", &x[2..]);
 				false
 			} else {
 				//Filter empty lines
