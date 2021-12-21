@@ -69,86 +69,37 @@ impl Pointcloud {
 		let mut offset = correlations[0].0 - correlations[0].1;
 		//assert!(correlations.iter().all(|x| *x.0 == x.1 - offset));
 		let mut transform_matrix =
-			Matrix3::<f64>::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
-		'outermost: for axis in 0..3 {
-			for axis_direction in [1.0, -1.0] {
-				for only_mirror in [true, false] {
-					for axis_rotation in 0..4 {
-						transform_matrix = Matrix3::new(
-							1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
-						);
-						let theta =
-							axis_rotation as f64 / 2.0 * std::f64::consts::PI;
-						let rot_matrix = Matrix2::new(
-							theta.cos().round(),
-							-(theta.sin().round()),
-							theta.sin().round(),
-							theta.cos().round(),
-						);
-						//println!("{}", rot_matrix);
-						let mut rotx = 0;
+			Matrix3::<f64>::new(2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
 
-						for i in 0..=2 {
-							if i == axis {
-								continue;
-							}
-							let mut roty = 0;
-							for j in 0..=2 {
-								if j == axis {
-									continue;
-								}
-								transform_matrix[(i, j)] =
-									rot_matrix[(rotx, roty)];
-								roty += 1;
-							}
-							rotx += 1;
-						}
-
-						// Switch the two axis around when we are looking into the other direction
-						let mut flip_matrix = Matrix3::new(
-							1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
-						);
-						if axis_direction < 0.0 && !only_mirror {
-							let neg_axis = match axis {
-								0 => [0, 2],
-								1 => [0, 1],
-								2 => [1, 2],
-								_ => [0, 0],
-							};
-							for ax in neg_axis {
-								flip_matrix[(ax, ax)] = axis_direction;
-							}
-						} else {
-							flip_matrix[(axis, axis)] = axis_direction;
-						}
-						transform_matrix = transform_matrix * flip_matrix;
-						offset = correlations[0].0
-							- (transform_matrix * *correlations[0].1);
-
-						let count = correlations.iter().fold(0, |r, x| {
-							if nalgebra::distance_squared(
-								x.0,
-								&((transform_matrix * x.1) + offset),
-							) < 0.25
-							{
-								r + 1
-							} else {
-								r
-							}
-						});
-						//println!("{}", count);
-						if count >= 12 {
-							println!("FOUND");
-							found_something = true;
-							//println!("")
-							break 'outermost;
-						} else {
-							if count > 0 {
-								println!(
-									"{}/{} are matching",
-									count,
-									correlations.len()
-								)
+		'outer: for x_maps_to in [0, 1, 2] {
+			for x_sign in [-1.0, 1.0] {
+				'y_map: for y_maps_to in [0, 1, 2] {
+					if y_maps_to == x_maps_to {
+						continue 'y_map;
+					}
+					for y_sign in [-1.0, 1.0] {
+						let z_maps_to = match (x_maps_to, y_maps_to) {
+							(0, 1) | (1, 0) => 2,
+							(0, 2) | (2, 0) => 1,
+							_ => 0,
+						};
+						for z_sign in [-1.0, 1.0] {
+							transform_matrix = Matrix3::new(
+								0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+							);
+							transform_matrix[(x_maps_to, 0)] = x_sign;
+							transform_matrix[(y_maps_to, 1)] = y_sign;
+							transform_matrix[(z_maps_to, 2)] = z_sign;
+							offset = correlations[0].0
+								- transform_matrix * correlations[0].1;
+							if correlations.iter().all(|x| {
+								*x.0 == (transform_matrix * x.1) + offset
+							}) {
+								println!("FOUND");
+								//println!("{:?}", correlations);
+								//println!("Inside {:?}", transform_matrix);
+								found_something = true;
+								break 'outer;
 							}
 						}
 					}
@@ -158,6 +109,7 @@ impl Pointcloud {
 		if !found_something {
 			println!("Somethings fubar!");
 		}
+		//println!("Outside {:?}", transform_matrix);
 		assert!(correlations
 			.iter()
 			.all(|x| *x.0 == (transform_matrix * x.1) + offset));
@@ -180,7 +132,7 @@ impl Pointcloud {
 }
 
 fn main() {
-	let file = File::open("example.txt").expect("file not found");
+	let file = File::open("input.txt").expect("file not found");
 	let lines = &mut BufReader::new(file)
 		.lines()
 		.map(|x| x.unwrap().to_string())
