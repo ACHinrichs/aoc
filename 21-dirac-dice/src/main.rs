@@ -56,16 +56,6 @@ fn get_wins(
 			for i in 0..points.len() {
 				res.push(if i == cur_player { 1 } else { 0 });
 			}
-			unsafe {
-				finished_runs += 1;
-				if finished_runs % 1_000 == 0 {
-					println!(
-						"Already finished {} games, HashMap-Size is {}",
-						finished_runs,
-						known_configurations.len()
-					);
-				}
-			}
 		} else {
 			res = play_quantum(
 				points.clone(),
