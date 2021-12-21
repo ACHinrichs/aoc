@@ -6,6 +6,7 @@ use std::io::BufReader;
 
 struct Pointcloud {
 	points: Vec<Point3<i64>>,
+	scanners: Vec<Point3<i64>>,
 }
 
 fn distance_squared(a: &Point3<i64>, b: &Point3<i64>) -> i64 {
@@ -18,14 +19,24 @@ fn manhattan_distance(a: &Point3<i64>, b: &Point3<i64>) -> i64 {
 impl Pointcloud {
 	fn from_points_ref(points_ref: &Vec<Point3<i64>>) -> Pointcloud {
 		let mut points = Vec::new();
+		let mut scanners = Vec::new();
+		scanners.push(Point3::new(0, 0, 0));
 		for p in points_ref.iter() {
 			points.push(*p);
 		}
-		Pointcloud { points: points }
+		Pointcloud {
+			points: points,
+			scanners: scanners,
+		}
 	}
 
 	fn from_points(points: Vec<Point3<i64>>) -> Pointcloud {
-		Pointcloud { points: points }
+		let mut scanners = Vec::new();
+		scanners.push(Point3::new(0, 0, 0));
+		Pointcloud {
+			points: points,
+			scanners: scanners,
+		}
 	}
 
 	fn merge_from(&mut self, cloud_b: &Pointcloud) -> bool {
@@ -126,6 +137,7 @@ impl Pointcloud {
 				.map(|x| transform_matrix * x + offset),
 		);
 		self.points = new_points;
+		self.scanners.push(Point3::new(0, 0, 0) + offset);
 		//self.points.dedup();
 		//println!("{:?}", new_points);
 		//Pointcloud::from_points(new_points)
@@ -189,4 +201,15 @@ fn main() {
 	}
 
 	println!("Number of points is: {}", first.points.len());
+
+	// Find max manhattan distance
+	// Using slow solution, cause it is faster to implement
+	println!(
+		"Max Manhattan distance is: {}",
+		first
+			.scanners
+			.iter()
+			.cartesian_product(first.scanners.iter())
+			.fold(0, |r, x| std::cmp::max(r, manhattan_distance(x.0, x.1)))
+	);
 }
