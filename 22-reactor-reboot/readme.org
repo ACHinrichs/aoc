@@ -1,0 +1,11 @@
+#+Title: Day 22
+
+Because I have a feeling what task 2 will be, this will be solved smartly.
+
+Every on-block will be saved in an own struct. If a new on block intersects with an existing on block, there are three possibilities:
+ - The existing one lies completely within the new one:
+   - The old one gets replaced by the new one.
+ - The new one lies completely within the old one:
+   - No changes necessary, the  old one is kept
+ - They intersect
+   - Now at most 4 edges of one block can be inside of the other, therefor we split one of the blocks into subbocks and keep only those that are not inside the other
