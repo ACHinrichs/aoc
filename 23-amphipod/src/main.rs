@@ -40,6 +40,16 @@ impl Amphipod {
 			PodColor::Desert => 1000,
 		}
 	}
+
+	fn get_target_room_index(&self) -> usize {
+		// Is harcoded, not pretty but works fine for this
+		match self.color {
+			PodColor::Amber => 0,
+			PodColor::Bronze => 1,
+			PodColor::Copper => 2,
+			PodColor::Desert => 3,
+		}
+	}
 }
 
 impl PartialEq for Room {
@@ -414,6 +424,33 @@ impl Hallway {
 			//println!("Winning strategy found!");
 		}
 		return min_cost_winning_path;
+	}
+
+	fn can_move_into_room(
+		&self,
+		field_index: usize,
+		room_index: usize,
+	) -> bool {
+		if self.fields[field_index].as_ref().unwrap().color
+			!= self.rooms[room_index].target_of
+		{
+			return false;
+		}
+		// if the room contains a wrong pod at the lower pos, or there is a pod at
+		// the upper position, return false
+		if (self.rooms[room_index].fields[1].is_some()
+			&& self.rooms[room_index].fields[1].as_ref().unwrap().color
+				!= self.rooms[room_index].target_of)
+			|| self.rooms[room_index].fields[0].is_some()
+		{
+			return false;
+		}
+		// Since the room is applicable now, we can move into it iff every field between
+		// the romm and us is empty:
+		return self.fields[std::cmp::min(room_index, field_index + 1)
+			..std::cmp::max(room_index, field_index - 1)]
+			.iter()
+			.all(|f| f.is_none());
 	}
 }
 
