@@ -13,7 +13,7 @@ struct Hallway {
 
 #[derive(Eq, Hash, Debug)]
 struct Room {
-	fields: [Option<Amphipod>; 2],
+	fields: [Option<Amphipod>; 4],
 	target_of: PodColor,
 	position: usize,
 }
@@ -83,7 +83,7 @@ impl PartialEq for Amphipod {
 
 impl Clone for Room {
 	fn clone(&self) -> Room {
-		let mut fields = [None, None];
+		let mut fields = [None, None, None, None];
 		for i in 0..self.fields.len() {
 			if self.fields[i].is_some() {
 				fields[i] = Some(self.fields[i].as_ref().unwrap().clone());
@@ -118,6 +118,45 @@ impl Clone for Amphipod {
 	}
 }
 
+impl std::fmt::Display for Hallway {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let mut res = "".to_owned();
+		for f in self.fields.iter() {
+			if f.is_none() {
+				res = res + ".";
+			} else {
+				res = res
+					+ match f.as_ref().unwrap().color {
+						PodColor::Amber => "A",
+						PodColor::Bronze => "B",
+						PodColor::Copper => "C",
+						PodColor::Desert => "D",
+					};
+			}
+		}
+
+		for f_index in 0..self.rooms[0].fields.len() {
+			res = res + "\n  ";
+			for r in self.rooms.iter() {
+				let field = r.fields[f_index].as_ref();
+				if field.is_none() {
+					res = res + ".";
+				} else {
+					res = res
+						+ match field.as_ref().unwrap().color {
+							PodColor::Amber => "A",
+							PodColor::Bronze => "B",
+							PodColor::Copper => "C",
+							PodColor::Desert => "D",
+						};
+				}
+				res = res + " ";
+			}
+		}
+		write!(f, "Hallway: \n{}", res)
+	}
+}
+
 fn eleven_nones() -> [Option<Amphipod>; 11] {
 	// I cant beleive i really have to do this this way
 	[
@@ -135,6 +174,12 @@ impl Hallway {
 							color: PodColor::Bronze,
 						}),
 						Some(Amphipod {
+							color: PodColor::Desert,
+						}),
+						Some(Amphipod {
+							color: PodColor::Desert,
+						}),
+						Some(Amphipod {
 							color: PodColor::Amber,
 						}),
 					],
@@ -147,6 +192,12 @@ impl Hallway {
 							color: PodColor::Copper,
 						}),
 						Some(Amphipod {
+							color: PodColor::Copper,
+						}),
+						Some(Amphipod {
+							color: PodColor::Bronze,
+						}),
+						Some(Amphipod {
 							color: PodColor::Desert,
 						}),
 					],
@@ -157,6 +208,12 @@ impl Hallway {
 					fields: [
 						Some(Amphipod {
 							color: PodColor::Bronze,
+						}),
+						Some(Amphipod {
+							color: PodColor::Bronze,
+						}),
+						Some(Amphipod {
+							color: PodColor::Amber,
 						}),
 						Some(Amphipod {
 							color: PodColor::Copper,
@@ -173,6 +230,12 @@ impl Hallway {
 						Some(Amphipod {
 							color: PodColor::Amber,
 						}),
+						Some(Amphipod {
+							color: PodColor::Copper,
+						}),
+						Some(Amphipod {
+							color: PodColor::Amber,
+						}),
 					],
 					position: 8,
 					target_of: PodColor::Desert,
@@ -182,248 +245,297 @@ impl Hallway {
 	}
 
 	fn create_input() -> Hallway {
-		Hallway::create_example()
+		Hallway {
+			fields: eleven_nones(),
+			rooms: [
+				Room {
+					fields: [
+						Some(Amphipod {
+							color: PodColor::Amber,
+						}),
+						Some(Amphipod {
+							color: PodColor::Desert,
+						}),
+						Some(Amphipod {
+							color: PodColor::Desert,
+						}),
+						Some(Amphipod {
+							color: PodColor::Bronze,
+						}),
+					],
+					position: 2,
+					target_of: PodColor::Amber,
+				},
+				Room {
+					fields: [
+						Some(Amphipod {
+							color: PodColor::Copper,
+						}),
+						Some(Amphipod {
+							color: PodColor::Copper,
+						}),
+						Some(Amphipod {
+							color: PodColor::Bronze,
+						}),
+						Some(Amphipod {
+							color: PodColor::Amber,
+						}),
+					],
+					position: 4,
+					target_of: PodColor::Bronze,
+				},
+				Room {
+					fields: [
+						Some(Amphipod {
+							color: PodColor::Bronze,
+						}),
+						Some(Amphipod {
+							color: PodColor::Bronze,
+						}),
+						Some(Amphipod {
+							color: PodColor::Amber,
+						}),
+						Some(Amphipod {
+							color: PodColor::Desert,
+						}),
+					],
+					position: 6,
+					target_of: PodColor::Copper,
+				},
+				Room {
+					fields: [
+						Some(Amphipod {
+							color: PodColor::Desert,
+						}),
+						Some(Amphipod {
+							color: PodColor::Amber,
+						}),
+						Some(Amphipod {
+							color: PodColor::Copper,
+						}),
+						Some(Amphipod {
+							color: PodColor::Copper,
+						}),
+					],
+					position: 8,
+					target_of: PodColor::Desert,
+				},
+			],
+		}
 	}
 
 	fn get_mincost_move(
 		&self,
-		cache: &mut HashMap<Hallway, i64>,
+		cache: &mut HashMap<Hallway, (i64, Vec<Hallway>)>,
 		abort_at: i64,
-	) -> i64 {
+		cost_this_path: i64,
+	) -> (i64, Vec<Hallway>) {
 		//Check if we are done:
+		if cost_this_path >= abort_at {
+			//println!("Aborted because path is worse than a found solution");
+			return (i64::MAX, vec![]);
+		}
+
 		if self.rooms.iter().all(|room| {
 			room.fields.iter().all(|f| {
-				if f.is_some() && f.as_ref().unwrap().color == room.target_of {
-					//println!("{:?}", room.target_of);
-					true
-				} else {
-					/*println!(
-						"{:?} {:?}",
-						if f.is_some() {
-							Some(f.as_ref().unwrap().color)
-						} else {
-							None
-						},
-						room.target_of
-					);// */
-					false
-				}
+				f.is_some() && f.as_ref().unwrap().color == room.target_of
 			})
 		}) {
-			println!("Found a winning path");
-			return 0;
+			println!("Found a winning path with cost {}", cost_this_path);
+			return (0, vec![self.clone()]);
 		}
 
 		let in_cache_optn = cache.get(self);
 		if in_cache_optn.is_some() {
-			/*println!(
-				"Already visited  {:?},\n\n {:?}",
-				self,
-				in_cache_optn.unwrap()
-			);// */
-			return *in_cache_optn.unwrap();
+			let unwrapped = in_cache_optn.unwrap();
+			if false && unwrapped.0 != i64::MAX {
+				println!("Found a winning strategie in cache");
+			}
+			if unwrapped.1.len() > 0 && false {
+				println!(
+					"{}\n{}\n\n\n",
+					self,
+					unwrapped.1[unwrapped.1.len() - 1].clone()
+				);
+			}
+			return (unwrapped.0, unwrapped.1.clone());
 		}
 
 		let mut min_cost_winning_path = i64::MAX;
+		let mut path = Vec::new();
 		// Setting self to the max, to prevent unbounded recursion
-		cache.insert(self.clone(), i64::MAX);
+		cache.insert(self.clone(), (i64::MAX, Vec::new()));
 		// First, check if any pod is infront of a room, this one has to move then
-		for (room_index, room) in self.rooms.iter().enumerate() {
+		for room in self.rooms.iter() {
 			if self.fields[room.position].is_some() {
-				// Possible moves: The Pod moves away from the opening,
-				// or the pod moves into the room if possible.
-				let cur_pod_ref = self.fields[room.position].as_ref().unwrap();
-				let move_cost = cur_pod_ref.cost_per_move();
-				if self.fields[room.position - 1].is_none() {
-					// Pod moves away to the left
-					let mut new_hallway = self.clone();
-					new_hallway.fields[room.position - 1] =
-						Some(cur_pod_ref.clone());
-					new_hallway.fields[room.position] = None;
-					let path_cost =
-						new_hallway.get_mincost_move(cache, abort_at);
-					if path_cost < i64::MAX {
-						min_cost_winning_path = std::cmp::min(
-							min_cost_winning_path,
-							path_cost + move_cost,
-						);
-					}
-					//cache.insert(new_hallway, path_cost);
-				}
-				if self.fields[room.position + 1].is_none() {
-					// Pod moves away to the right
-					// ToDo remove code duplication
-					let mut new_hallway = self.clone();
-					new_hallway.fields[room.position + 1] =
-						Some(cur_pod_ref.clone());
-					new_hallway.fields[room.position] = None;
-					let path_cost =
-						new_hallway.get_mincost_move(cache, abort_at);
-					if path_cost < i64::MAX {
-						min_cost_winning_path = std::cmp::min(
-							min_cost_winning_path,
-							path_cost + move_cost,
-						);
-					}
-					//cache.insert(new_hallway, path_cost);
-				}
-				if cur_pod_ref.color == room.target_of
-					&& room.fields[0].is_none() // Upper one has to be empty
-					&& (room.fields[1].is_none() // lower one has to be empty …
-						|| room.fields[1].as_ref().unwrap().color == room.target_of)
-				//… or the pod there has to belong there
-				{
-					//println!("Move into room");
-					let mut new_hallway = self.clone();
-					new_hallway.rooms[room_index].fields[0] =
-						Some(cur_pod_ref.clone());
-					new_hallway.fields[room.position] = None;
-					let path_cost =
-						new_hallway.get_mincost_move(cache, abort_at);
-					if path_cost < i64::MAX {
-						min_cost_winning_path = std::cmp::min(
-							min_cost_winning_path,
-							path_cost + move_cost,
-						);
-					}
-					//cache.insert(new_hallway, path_cost);
-				}
-				cache.insert(self.clone(), min_cost_winning_path);
-				return min_cost_winning_path; // If we have found one of those, we may not make any other moves now!
+				panic!("This should not happen with the new logic!");
 			}
 		}
 		// Check if we can move the ones in the rooms
 		for (room_index, room) in self.rooms.iter().enumerate() {
-			if room.fields[0].is_some() {
-				let cur_pod = room.fields[0].as_ref().unwrap().clone();
-				let move_cost = cur_pod.cost_per_move();
-				if cur_pod.color == room.target_of {
-					if room.fields[1].is_none() {
-						// if the one on 0 belongs into the room move down…
-						//println!("Move down");
-						let mut new_hallway = self.clone();
-						new_hallway.rooms[room_index].fields[0] = None;
-						new_hallway.rooms[room_index].fields[1] = Some(cur_pod);
-						let path_cost =
-							new_hallway.get_mincost_move(cache, abort_at);
-						if path_cost < i64::MAX {
-							min_cost_winning_path = std::cmp::min(
-								min_cost_winning_path,
-								path_cost + move_cost,
-							);
-						}
-					//cache.insert(new_hallway, path_cost);
-					} else if room.fields[1].as_ref().unwrap().color
-						!= room.target_of && self.fields[room.position]
-						.is_none()
-					{
-						/*println!(
-							"Move {:?} out of room {} to give way to {:?}",
-							cur_pod,
-							room_index,
-							room.fields[1].as_ref().unwrap().color
-						);// */
-						let mut new_hallway = self.clone();
-						new_hallway.rooms[room_index].fields[0] = None;
-						new_hallway.fields[room.position] = Some(cur_pod);
-						let path_cost =
-							new_hallway.get_mincost_move(cache, abort_at);
-						if path_cost < i64::MAX {
-							min_cost_winning_path = std::cmp::min(
-								min_cost_winning_path,
-								path_cost + move_cost,
-							);
-						}
-						// … or up to not block in a wrong-colored one
-					}
-				} else {
-					// if the one on 0 does not belong into the room only move up
-					if self.fields[room.position].is_none() {
-						/*println!(
-							"Move {:?} out of room {}",
-							cur_pod, room_index
-						);// */
-						let mut new_hallway = self.clone();
-						new_hallway.rooms[room_index].fields[0] = None;
-						new_hallway.fields[room.position] = Some(cur_pod);
-						let path_cost =
-							new_hallway.get_mincost_move(cache, abort_at);
-						if path_cost < i64::MAX {
-							min_cost_winning_path = std::cmp::min(
-								min_cost_winning_path,
-								path_cost + move_cost,
-							);
-						}
-						//cache.insert(new_hallway, path_cost);
-					}
-				}
-			} else {
-				if room.fields[1].is_some() {
-					let cur_pod = room.fields[1].as_ref().unwrap().clone();
-					// if the one on 1 does not belong into the room we can move it up
-					if cur_pod.color != room.target_of {
-						//println!("Moving up");
-						let move_cost = cur_pod.cost_per_move();
-						let mut new_hallway = self.clone();
-						new_hallway.rooms[room_index].fields[1] = None;
-						new_hallway.rooms[room_index].fields[0] = Some(cur_pod);
-						let path_cost =
-							new_hallway.get_mincost_move(cache, abort_at);
-						if path_cost < i64::MAX {
-							min_cost_winning_path = std::cmp::min(
-								min_cost_winning_path,
-								path_cost + move_cost,
-							);
+			for room_field_index in 0..room.fields.len() {
+				if room.fields[room_field_index].is_some() {
+					let cur_pod =
+						room.fields[room_field_index].as_ref().unwrap().clone();
+					let mut move_cost = cur_pod.cost_per_move();
+					if room_field_index < room.fields.len() - 1
+						&& cur_pod.color == room.target_of
+						&& room.fields[room_field_index + 1..room.fields.len()]
+							.iter()
+							.all(|x| {
+								x.is_none()
+									|| x.as_ref().unwrap().color
+										== room.target_of
+							}) {
+						if room.fields[room_field_index + 1].is_none() {
+							// Do this only if there is room
+							// if the one on 0 belongs into the room and the room is empty move it down…
+							//println!("Move down");
+							let mut new_hallway = self.clone();
+							new_hallway.rooms[room_index].fields
+								[room_field_index] = None;
+							new_hallway.rooms[room_index].fields
+								[room_field_index + 1] = Some(cur_pod.clone());
+							let (path_cost, found_path) = new_hallway
+								.get_mincost_move(
+									cache,
+									std::cmp::min(
+										abort_at,
+										min_cost_winning_path,
+									),
+									cost_this_path + move_cost,
+								);
+							if path_cost < i64::MAX
+								&& path_cost + move_cost < min_cost_winning_path
+							{
+								min_cost_winning_path = path_cost + move_cost;
+								path = found_path;
+							}
 						}
 					}
-					//cache.insert(new_hallway, path_cost);
+					if (cur_pod.clone().color != room.target_of
+						|| room.fields[room_field_index + 1..room.fields.len()]
+							.iter()
+							.any(|x| {
+								x.is_none()
+									|| x.as_ref().unwrap().color
+										!= room.target_of
+							})) {
+						//In this case, either the current pod does not belong here,
+						// or there is some pod not belonging here below us
+						if room_field_index > 0 {
+							// so we move it up
+							if room.fields[room_field_index - 1].is_none() {
+								// Do this only if there is room
+								// if the one on 0 belongs into the room and the room is empty move it down…
+								//println!("Move down");
+								let mut new_hallway = self.clone();
+								new_hallway.rooms[room_index].fields
+									[room_field_index] = None;
+								new_hallway.rooms[room_index].fields
+									[room_field_index - 1] = Some(cur_pod);
+								let (path_cost, found_path) = new_hallway
+									.get_mincost_move(
+										cache,
+										std::cmp::min(
+											abort_at,
+											min_cost_winning_path,
+										),
+										cost_this_path + move_cost,
+									);
+								if path_cost < i64::MAX
+									&& path_cost + move_cost
+										< min_cost_winning_path
+								{
+									min_cost_winning_path =
+										path_cost + move_cost;
+									path = found_path;
+								}
+							}
+						} else {
+							// … or out if we are at 0
+							for target_field in 0..self.fields.len() {
+								if !self.infront_of_room(target_field)
+									&& self.fields_empty(
+										target_field,
+										room.position,
+									) {
+									let mut new_hallway = self.clone();
+									new_hallway.rooms[room_index].fields[0] =
+										None;
+									new_hallway.fields[target_field] =
+										Some(cur_pod.clone());
+									move_cost = cur_pod.cost_per_move()
+										* ((target_field as i64
+											- room.position as i64)
+											.abs() + 1); //Overwriting with intend!
+
+									let (path_cost, found_path) = new_hallway
+										.get_mincost_move(
+											cache,
+											std::cmp::min(
+												abort_at,
+												min_cost_winning_path,
+											),
+											cost_this_path + move_cost,
+										);
+									if path_cost < i64::MAX
+										&& path_cost + move_cost
+											< min_cost_winning_path
+									{
+										min_cost_winning_path =
+											path_cost + move_cost;
+										path = found_path;
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
+
 		// Move the ones that are on the hallway (not infront of a room)
 		for field_index in 0..self.fields.len() {
+			// We only have to move into room because auf condition 3
 			if self.fields[field_index].is_none() {
 				continue;
 			}
 			let cur_pod = self.fields[field_index].as_ref().unwrap();
-			let move_cost = cur_pod.cost_per_move();
-			if field_index >= 1 {
-				// Move to the left
+			let target_index = cur_pod.get_target_room_index();
+
+			if self.can_move_into_room(field_index, target_index) {
+				let move_cost = ((field_index as i64
+					- self.rooms[target_index].position as i64)
+					.abs() + 1) * cur_pod.cost_per_move();
+
 				let mut new_hallway = self.clone();
 				new_hallway.fields[field_index] = None;
-				new_hallway.fields[field_index - 1] = Some(cur_pod.clone());
-				let path_cost = new_hallway.get_mincost_move(cache, abort_at);
-				if path_cost < i64::MAX {
-					min_cost_winning_path = std::cmp::min(
-						min_cost_winning_path,
-						path_cost + move_cost,
-					);
+				new_hallway.rooms[target_index].fields[0] =
+					Some(cur_pod.clone());
+
+				let (path_cost, found_path) = new_hallway.get_mincost_move(
+					cache,
+					std::cmp::min(abort_at, min_cost_winning_path),
+					cost_this_path + move_cost,
+				);
+				if path_cost < i64::MAX
+					&& path_cost + move_cost < min_cost_winning_path
+				{
+					min_cost_winning_path = path_cost + move_cost;
+					path = found_path;
 				}
-				//cache.insert(new_hallway, path_cost);
-			}
-			if field_index < self.fields.len() - 1 {
-				// Move to the right
-				let mut new_hallway = self.clone();
-				new_hallway.fields[field_index] = None;
-				new_hallway.fields[field_index + 1] = Some(cur_pod.clone());
-				let path_cost = new_hallway.get_mincost_move(cache, abort_at);
-				if path_cost < i64::MAX {
-					min_cost_winning_path = std::cmp::min(
-						min_cost_winning_path,
-						path_cost + move_cost,
-					);
-				}
-				//cache.insert(new_hallway, path_cost);
 			}
 		}
 		// Update cost before terminating
-		cache.insert(self.clone(), min_cost_winning_path);
+		path.push(self.clone());
+		cache.insert(self.clone(), (min_cost_winning_path, path.clone()));
 		if min_cost_winning_path == i64::MAX {
 			//println!("The only winning move is not to play");
 		} else {
 			//println!("Winning strategy found!");
 		}
-		return min_cost_winning_path;
+		return (min_cost_winning_path, path);
 	}
 
 	fn can_move_into_room(
@@ -438,19 +550,32 @@ impl Hallway {
 		}
 		// if the room contains a wrong pod at the lower pos, or there is a pod at
 		// the upper position, return false
-		if (self.rooms[room_index].fields[1].is_some()
-			&& self.rooms[room_index].fields[1].as_ref().unwrap().color
-				!= self.rooms[room_index].target_of)
-			|| self.rooms[room_index].fields[0].is_some()
+		if (self.rooms[room_index].fields.iter().any(|x| {
+			x.is_some()
+				&& x.as_ref().unwrap().color != self.rooms[room_index].target_of
+		}) || self.rooms[room_index].fields[0].is_some())
 		{
 			return false;
 		}
 		// Since the room is applicable now, we can move into it iff every field between
-		// the romm and us is empty:
-		return self.fields[std::cmp::min(room_index, field_index + 1)
-			..std::cmp::max(room_index, field_index - 1)]
+		// the room and us is empty:
+		return self.fields[std::cmp::min(
+			self.rooms[room_index].position,
+			field_index + 1,
+		)
+			..std::cmp::max(self.rooms[room_index].position + 1, field_index)]
 			.iter()
 			.all(|f| f.is_none());
+	}
+
+	fn infront_of_room(&self, field: usize) -> bool {
+		self.rooms.iter().any(|x| x.position == field)
+	}
+
+	fn fields_empty(&self, start: usize, end: usize) -> bool {
+		self.fields[std::cmp::min(start, end)..std::cmp::max(start, end) + 1]
+			.iter()
+			.all(|x| x.is_none())
 	}
 }
 
@@ -474,14 +599,17 @@ fn main() {
 		start_configuration = Hallway::create_example();
 	}
 
-	if task == 1 {
+	if task == 2 {
 		let mut cache = HashMap::new();
-		println!(
-			"Min-Cost strategy has cost {}",
-			start_configuration.get_mincost_move(&mut cache, i64::MAX)
-		);
+		let (res, path) =
+			start_configuration.get_mincost_move(&mut cache, i64::MAX, 0);
+		println!("Min-Cost strategy has cost {}", res);
+		println!("Path:");
+		for h in path {
+			println!("{}", h);
+		}
 	//println!("Cache is: {:?}", cache);
-	} else if task == 2 {
+	} else if task == 1 {
 	} else {
 		panic!("{} is not a valid task, please supply either 1 or 2!", task);
 	}
