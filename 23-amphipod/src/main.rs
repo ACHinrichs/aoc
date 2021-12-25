@@ -333,7 +333,7 @@ impl Hallway {
 		//Check if we are done:
 		if cost_this_path >= abort_at {
 			//println!("Aborted because path is worse than a found solution");
-			//return (i64::MAX, vec![]);
+			return (i64::MAX, vec![]);
 		}
 
 		if self.rooms.iter().all(|room| {
@@ -371,7 +371,7 @@ impl Hallway {
 				panic!("This should not happen with the new logic!");
 			}
 		}
-		// Check if we can move the ones in the rooms
+		// Move the ones in the rooms
 		for (room_index, room) in self.rooms.iter().enumerate() {
 			for room_field_index in 0..room.fields.len() {
 				if room.fields[room_field_index].is_some() {
@@ -417,8 +417,8 @@ impl Hallway {
 						|| room.fields[room_field_index + 1..room.fields.len()]
 							.iter()
 							.any(|x| {
-								x.is_none()
-									|| x.as_ref().unwrap().color
+								x.is_some()
+									&& x.as_ref().unwrap().color
 										!= room.target_of
 							}) {
 						//In this case, either the current pod does not belong here,
@@ -465,8 +465,8 @@ impl Hallway {
 										None;
 									new_hallway.fields[target_field] =
 										Some(cur_pod.clone());
-									let move_dist = (target_field as i64
-										- room.position as i64)
+									let move_dist = ((target_field as i64)
+										- (room.position as i64))
 										.abs() + 1;
 
 									let (path_cost, found_path) = new_hallway
@@ -604,7 +604,6 @@ fn main() {
 		let mut cache = HashMap::new();
 		let (res, path) =
 			start_configuration.get_mincost_move(&mut cache, i64::MAX, 0);
-		println!("Min-Cost strategy has cost {}", res);
 		println!("Path:");
 		for h in path.iter().rev() {
 			let cached = cache.get(h);
@@ -614,6 +613,7 @@ fn main() {
 				println!("Cost Remaining: {}", cached.unwrap().0);
 			}
 		}
+		println!("Min-Cost strategy has cost {}", res);
 	//println!("Cache is: {:?}", cache);
 	} else if task == 1 {
 	} else {
