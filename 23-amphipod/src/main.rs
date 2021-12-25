@@ -333,7 +333,7 @@ impl Hallway {
 		//Check if we are done:
 		if cost_this_path >= abort_at {
 			//println!("Aborted because path is worse than a found solution");
-			return (i64::MAX, vec![]);
+			//return (i64::MAX, vec![]);
 		}
 
 		if self.rooms.iter().all(|room| {
@@ -365,7 +365,7 @@ impl Hallway {
 		let mut path = Vec::new();
 		// Setting self to the max, to prevent unbounded recursion
 		cache.insert(self.clone(), (i64::MAX, Vec::new()));
-		// First, check if any pod is infront of a room, this one has to move then
+		// First, check if any pod is infront of a room, should not be the case
 		for room in self.rooms.iter() {
 			if self.fields[room.position].is_some() {
 				panic!("This should not happen with the new logic!");
@@ -377,7 +377,7 @@ impl Hallway {
 				if room.fields[room_field_index].is_some() {
 					let cur_pod =
 						room.fields[room_field_index].as_ref().unwrap().clone();
-					let mut move_cost = cur_pod.cost_per_move();
+					let move_cost = cur_pod.cost_per_move();
 					if room_field_index < room.fields.len() - 1
 						&& cur_pod.color == room.target_of
 						&& room.fields[room_field_index + 1..room.fields.len()]
@@ -413,20 +413,20 @@ impl Hallway {
 							}
 						}
 					}
-					if (cur_pod.clone().color != room.target_of
+					if cur_pod.clone().color != room.target_of
 						|| room.fields[room_field_index + 1..room.fields.len()]
 							.iter()
 							.any(|x| {
 								x.is_none()
 									|| x.as_ref().unwrap().color
 										!= room.target_of
-							})) {
+							}) {
 						//In this case, either the current pod does not belong here,
 						// or there is some pod not belonging here below us
 						if room_field_index > 0 {
 							// so we move it up
 							if room.fields[room_field_index - 1].is_none() {
-								// Do this only if there is room
+								// Do this only if there is roomy
 								// if the one on 0 belongs into the room and the room is empty move it down…
 								//println!("Move down");
 								let mut new_hallway = self.clone();
@@ -465,10 +465,9 @@ impl Hallway {
 										None;
 									new_hallway.fields[target_field] =
 										Some(cur_pod.clone());
-									move_cost = cur_pod.cost_per_move()
-										* ((target_field as i64
-											- room.position as i64)
-											.abs() + 1); //Overwriting with intend!
+									let move_dist = (target_field as i64
+										- room.position as i64)
+										.abs() + 1;
 
 									let (path_cost, found_path) = new_hallway
 										.get_mincost_move(
@@ -477,14 +476,15 @@ impl Hallway {
 												abort_at,
 												min_cost_winning_path,
 											),
-											cost_this_path + move_cost,
+											cost_this_path
+												+ move_cost * move_dist,
 										);
 									if path_cost < i64::MAX
-										&& path_cost + move_cost
+										&& path_cost + move_cost * move_dist
 											< min_cost_winning_path
 									{
 										min_cost_winning_path =
-											path_cost + move_cost;
+											path_cost + move_cost * move_dist;
 										path = found_path;
 									}
 								}
@@ -527,6 +527,7 @@ impl Hallway {
 				}
 			}
 		}
+
 		// Update cost before terminating
 		path.push(self.clone());
 		cache.insert(self.clone(), (min_cost_winning_path, path.clone()));
@@ -550,10 +551,10 @@ impl Hallway {
 		}
 		// if the room contains a wrong pod at the lower pos, or there is a pod at
 		// the upper position, return false
-		if (self.rooms[room_index].fields.iter().any(|x| {
+		if self.rooms[room_index].fields.iter().any(|x| {
 			x.is_some()
 				&& x.as_ref().unwrap().color != self.rooms[room_index].target_of
-		}) || self.rooms[room_index].fields[0].is_some())
+		}) || self.rooms[room_index].fields[0].is_some()
 		{
 			return false;
 		}
@@ -605,8 +606,13 @@ fn main() {
 			start_configuration.get_mincost_move(&mut cache, i64::MAX, 0);
 		println!("Min-Cost strategy has cost {}", res);
 		println!("Path:");
-		for h in path {
+		for h in path.iter().rev() {
+			let cached = cache.get(h);
+
 			println!("{}", h);
+			if cached.is_some() {
+				println!("Cost Remaining: {}", cached.unwrap().0);
+			}
 		}
 	//println!("Cache is: {:?}", cache);
 	} else if task == 1 {
