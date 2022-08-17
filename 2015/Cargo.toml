@@ -1,0 +1,5 @@
+[workspace]
+
+members = [
+    "06-fire-hazard",
+]
