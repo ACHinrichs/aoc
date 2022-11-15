@@ -1,51 +1,55 @@
 use itertools::Itertools;
+use regex::Regex;
 use std::env;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
 #[derive(Debug)]
-struct Block {
-	point: (i64, i64, i64),
-	edgelengths: (i64, i64, i64),
+struct Cuboid {
+	start: (i64, i64, i64),
+	end: (i64, i64, i64),
 }
 
-impl Clone for Block {
-	fn clone(&self) -> Block {
-		return Block {
-			point: self.point,
-			edgelengths: self.edgelengths,
+impl Clone for Cuboid {
+	fn clone(&self) -> Cuboid {
+		return Cuboid {
+			start: self.start,
+			end: self.end,
 		};
 	}
 }
-impl Copy for Block {}
+impl Copy for Cuboid {}
 
-impl Block {
-	fn new_from_points(p1: (i64, i64, i64), p2: (i64, i64, i64)) -> Block {
-		assert!((p1.0 - p2.0).abs() != 0);
-		assert!((p1.1 - p2.1).abs() != 0);
-		assert!((p1.2 - p2.2).abs() != 0);
-		return Block {
-			point: (
+impl Cuboid {
+	fn new_from_points(p1: (i64, i64, i64), p2: (i64, i64, i64)) -> Cuboid {
+		return Cuboid {
+			start: (
 				std::cmp::min(p1.0, p2.0),
 				std::cmp::min(p1.1, p2.1),
 				std::cmp::min(p1.2, p2.2),
 			),
-			edgelengths: (
-				(p1.0 - p2.0).abs(),
-				(p1.1 - p2.1).abs(),
-				(p1.2 - p2.2).abs(),
+			end: (
+				std::cmp::max(p1.0, p2.0),
+				std::cmp::max(p1.1, p2.1),
+				std::cmp::max(p1.2, p2.2),
 			),
 		};
 	}
 
+	fn count_cubes(&self) -> i64 {
+		return ((self.end.0 - self.start.0).abs() + 1)
+			* ((self.end.1 - self.start.1).abs() + 1)
+			* ((self.end.2 - self.start.2).abs() + 1);
+	}
+
 	fn point_inside(&self, p: (i64, i64, i64)) -> bool {
-		return self.point.0 <= p.0
-			&& p.0 < self.point.0 + self.edgelengths.0
-			&& self.point.1 <= p.1
-			&& p.1 < self.point.1 + self.edgelengths.1
-			&& self.point.2 <= p.2
-			&& p.2 < self.point.2 + self.edgelengths.2;
+		return self.start.0 <= p.0
+			&& p.0 <= self.end.0
+			&& self.start.1 <= p.1
+			&& p.1 <= self.end.1
+			&& self.start.2 <= p.2
+			&& p.2 <= self.end.2;
 	}
 
 	// yea, i know that inside vec is bullshit, but i cant be bothered to fix this
@@ -56,11 +60,11 @@ impl Block {
 	//}
 
 	// returns all corners from self that are contained in other
-	fn corners_inside(&self, other: &Block) -> Vec<(i64, i64, i64)> {
+	fn corners_inside(&self, other: &Cuboid) -> Vec<(i64, i64, i64)> {
 		let corners_temp = [
-			[self.point.0, self.point.0 + self.edgelengths.0],
-			[self.point.1, self.point.1 + self.edgelengths.1],
-			[self.point.2, self.point.2 + self.edgelengths.2],
+			[self.start.0, self.end.0],
+			[self.start.1, self.end.1],
+			[self.start.2, self.end.2],
 		];
 		let corners = corners_temp.iter().multi_cartesian_product();
 		let mut corners_inside = Vec::new();
@@ -75,120 +79,165 @@ impl Block {
 		return corners_inside;
 	}
 
-	fn remove_intersection(&self, other: &Block) -> Vec<Block> {
-		// returns [self] islef is larger than other
-		let mut corners_inside = other.corners_inside(self);
-		if corners_inside.len() == 0 {
-			//switch the corners around, so that this works if slef is larger than other
-			todo!("think about this case");
-			println!("Switching around, because self might be larger");
-			corners_inside = self.corners_inside(other);
-			if corners_inside.len() == 8 {
-				// if 8 corners of self are insode of other, we are completly contained, return []
-				return Vec::new();
-			} else if corners_inside.len() == 0 {
-				// if 0 corners of self are inside other, and 0 corners of other are inside self we are compeltly disjoint, return self
-				return vec![*self];
-			}
-		} else if corners_inside.len() == 8 {
-			let corners_inside_flipped = self.corners_inside(other);
-			if corners_inside_flipped.len() == 8 {
-				return Vec::new();
-			} else {
-				println!("What the fuck self {:?}, \n other:{:?}", self, other);
-			}
-		}
-		println!("corners {:?}", corners_inside);
-		println!(">=== {:?}", other);
-		println!("partially contained {}", corners_inside.len());
-		println!("{:?}", corners_inside);
-		let mut octtree = self.octtree(
-			corners_inside
-				.clone()
-				.into_iter()
-				.filter(|x| {
-					x.0 != self.point.0
-						&& x.1 != self.point.1 && x.2 != self.point.2
-				})
-				.fold(
-					(
-						self.point.0 + self.edgelengths.0,
-						self.point.1 + self.edgelengths.1,
-						self.point.2 + self.edgelengths.2,
-					),
-					|r, x| {
-						(
-							std::cmp::min(x.0, r.0),
-							std::cmp::min(x.1, r.1),
-							std::cmp::min(x.2, r.2),
-						)
-					},
-				),
-		);
-		/*if corners_inside.len() == 8 {
-			let new_octtree = Vec::new();
-			for o in octtree.into_iter() {
+	fn cube_minus(&self, other: &Cuboid) -> Vec<Cuboid> {
+		// Removes the part of self that is intersected with other,
+		// Returns a list of subcubes __all contained in self and not in other__, e.g. no subcube intersects other
+		let mut res = self.decompose(other);
+		let len_before = res.len();
+		res.retain(|cuboid| cuboid.corners_inside(other).len() == 0);
+		let len_after = res.len();
 
-		}
-			new_octtree = octtree
-			.into_iter()
-			.filter(|x| x.corners_inside(other).len() != 8)
-			.collect(); // If all corners are inside the other we have to remove it
-			// Create hole in self
-		} else if corners_inside.len() == 4 {
-			// similarly create hole, but keep one subblock less
-		} else if corners_inside.len() == 1 {*/
-		// just remove one quarter of self
-		println!("Octtree: {:?}", octtree);
-		octtree = octtree
-			.into_iter()
-			.filter(|x| x.corners_inside(other).len() > 0)
-			.collect(); // If all corners are inside the other we have to remove it
+		// we should have removed at most one subcube
+		assert!(len_before - len_after == 0 || len_before - len_after == 1);
 
-		let mut res_blocks = Vec::new();
-		for o in octtree {
-			res_blocks.extend(o.remove_intersection(other))
-		}
-		//} else {
-		// Should actually never happen
-		//	unreachable!()
-		//}
-		return res_blocks;
+		return res;
 	}
 
-	fn octtree(&self, p1: (i64, i64, i64)) -> Vec<Block> {
-		// Attention, those blocks overlap at point p!
-		if !self.point_inside(p1) {
-			println!("{:?} not in {:?}", p1, self);
-			return Vec::with_capacity(0);
+	fn decompose(&self, other: &Cuboid) -> Vec<Cuboid> {
+		let mut res = Vec::new();
+		if other.corners_inside(self).len() == 0 {
+			// no corners of other are in self, so we do not need to split self
+			res.push(*self);
+			return res;
 		}
-		/*
-		let corners_temp =
-			[[self.point.0, self.point.0 + self.edgelength], [self.point.1, self.point.1 + self.edgelength], [self.point.2, self.point.2 + self.edgelength]];
-		let corners = corners_temp.iter().multi_cartesian_product();*/
-		let mut res = Vec::with_capacity(8);
-		let x1 = self.point;
-		let x2 = (
-			self.point.0 + self.edgelengths.0,
-			self.point.1 + self.edgelengths.1,
-			self.point.2 + self.edgelengths.2,
+		// new cuboid within our dimensions
+		let c = &Cuboid::new_from_points(
+			(
+				std::cmp::max(self.start.0, other.start.0),
+				std::cmp::max(self.start.1, other.start.1),
+				std::cmp::max(self.start.2, other.start.2),
+			),
+			(
+				std::cmp::min(self.end.0, other.end.0),
+				std::cmp::min(self.end.1, other.end.1),
+				std::cmp::min(self.end.2, other.end.2),
+			),
 		);
+		//Cubes on lowest layer (z=0)
+		res.push(Cuboid::new_from_points(
+			(self.start.0, self.start.1, self.start.2),
+			(c.start.0 - 1, c.start.1 - 1, c.start.2 - 1),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, self.start.1, self.start.2),
+			(c.end.0, c.start.1 - 1, c.start.2 - 1),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, self.start.1, self.start.2),
+			(self.end.0, c.start.1 - 1, c.start.2 - 1),
+		));
 
-		let cubes = [
-			((x1.0, x1.1, x1.2), (p1.0 + 1, p1.1 + 1, p1.2 + 1)),
-			((x1.0, x1.1, p1.2 + 1), (p1.0 + 1, p1.1 + 1, x2.2)),
-			((x1.0, p1.1 + 1, x1.2), (p1.0 + 1, x2.1, p1.2 + 1)),
-			((x1.0, p1.1 + 1, p1.2 + 1), (p1.0 + 1, x2.1, x2.2)),
-			((p1.0 + 1, x1.1, x1.2), (x2.0, p1.1 + 1, p1.2 + 1)),
-			((p1.0 + 1, x1.1, p1.2 + 1), (x2.0, p1.1 + 1, x2.2)),
-			((p1.0 + 1, p1.1 + 1, x1.2), (x2.0, x2.1, p1.2 + 1)),
-			((p1.0 + 1, p1.1 + 1, p1.2 + 1), (x2.0, x2.1, x2.2)),
-		];
-		println!("Octtree of {:?}, with pivot {:?}", self, p1);
-		for c in cubes {
-			println!("{:?}", c);
-			res.push(Block::new_from_points(c.0, c.1)); // Works, cause new reorders the corners
-		}
+		res.push(Cuboid::new_from_points(
+			(self.start.0, c.start.1, self.start.2),
+			(c.start.0 - 1, c.end.1, c.start.2 - 1),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, c.start.1, self.start.2),
+			(c.end.0, c.end.1, c.start.2 - 1),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, c.start.1, self.start.2),
+			(self.end.0, c.end.1, c.start.2 - 1),
+		));
+
+		res.push(Cuboid::new_from_points(
+			(self.start.0, c.end.1 + 1, self.start.2),
+			(c.start.0 - 1, self.end.1, c.start.2 - 1),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, c.end.1 + 1, self.start.2),
+			(c.end.0, self.end.1, c.start.2 - 1),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, c.end.1 + 1, self.start.2),
+			(self.end.0, self.end.1, c.start.2 - 1),
+		));
+
+		// cubes on middel layer (z dimensions like c)
+		res.push(Cuboid::new_from_points(
+			(self.start.0, self.start.1, c.start.2),
+			(c.start.0 - 1, c.start.1 - 1, c.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, self.start.1, c.start.2),
+			(c.end.0, c.start.1 - 1, c.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, self.start.1, c.start.2),
+			(self.end.0, c.start.1 - 1, c.end.2),
+		));
+
+		res.push(Cuboid::new_from_points(
+			(self.start.0, c.start.1, c.start.2),
+			(c.start.0 - 1, c.end.1, c.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, c.start.1, c.start.2),
+			(c.end.0, c.end.1, c.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, c.start.1, c.start.2),
+			(self.end.0, c.end.1, c.end.2),
+		));
+
+		res.push(Cuboid::new_from_points(
+			(self.start.0, c.end.1 + 1, c.start.2),
+			(c.start.0 - 1, self.end.1, c.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, c.end.1 + 1, c.start.2),
+			(c.end.0, self.end.1, c.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, c.end.1 + 1, c.start.2),
+			(self.end.0, self.end.1, c.end.2),
+		));
+		// cubes on uppermost layer (z ends at self.end)
+		res.push(Cuboid::new_from_points(
+			(self.start.0, self.start.1, c.end.2 + 1),
+			(c.start.0 - 1, c.start.1 - 1, self.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, self.start.1, c.end.2 + 1),
+			(c.end.0, c.start.1 - 1, self.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, self.start.1, c.end.2 + 1),
+			(self.end.0, c.start.1 - 1, self.end.2),
+		));
+
+		res.push(Cuboid::new_from_points(
+			(self.start.0, c.start.1, c.end.2 + 1),
+			(c.start.0 - 1, c.end.1, self.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, c.start.1, c.end.2 + 1),
+			(c.end.0, c.end.1, self.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, c.start.1, c.end.2 + 1),
+			(self.end.0, c.end.1, self.end.2),
+		));
+
+		res.push(Cuboid::new_from_points(
+			(self.start.0, c.end.1 + 1, c.end.2 + 1),
+			(c.start.0 - 1, self.end.1, self.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.start.0, c.end.1 + 1, c.end.2 + 1),
+			(c.end.0, self.end.1, self.end.2),
+		));
+		res.push(Cuboid::new_from_points(
+			(c.end.0 + 1, c.end.1 + 1, c.end.2 + 1),
+			(self.end.0, self.end.1, self.end.2),
+		));
+
+		//Very hacky
+		// Delete cuboids with wrong lower/upper bounds:
+		res.retain(|cuboid| {
+			self.point_inside(cuboid.start) && self.point_inside(cuboid.end)
+		});
+
 		return res;
 	}
 }
@@ -200,53 +249,51 @@ fn main() {
 	}
 	let task = &args[2];
 	if task == "test" {
-		let block1 = Block::new_from_points((0, 0, 0), (10, 10, 10));
+		let block1 = Cuboid::new_from_points((0, 0, 0), (10, 10, 10));
 
 		println!("=== Check if occtree-buildung works ===");
-		let p = (5, 5, 5);
-		let blocks = block1.octtree(p);
-		for b in blocks.iter() {
-			println!("{}    {:?}", b.point_inside(p), b);
-		}
+		let points = [
+			[(5, 5, 5), (5, 5, 5)],
+			[(2, 2, 2), (9, 9, 9)],
+			[(4, 4, 4), (6, 6, 6)],
+			[(0, 0, 0), (5, 5, 5)],
+			[(10, 10, 10), (10, 10, 10)],
+			[(10, 0, 10), (10, 10, 10)],
+			[(10, 11, 10), (12, 12, 12)],
+		];
+		for p in points.iter() {
+			let blocks = block1.decompose(&Cuboid::new_from_points(p[0], p[1]));
+			println!("\nSplit cuboid by: {:?}", p);
+			for b in blocks.iter() {
+				println!("Result: {:?}", b);
+			}
 
-		for x in 0..10 {
-			for y in 0..10 {
-				for z in 0..10 {
-					let contained_count = blocks.iter().fold(0, |r, b| {
-						if b.point_inside((x, y, z)) {
-							r + 1
-						} else {
-							r
-						}
-					});
-					//println!("Testing ({},{},{}) {}", x, y, z, contained_count);
-					assert!(contained_count == 1);
+			for x in 0..10 {
+				for y in 0..10 {
+					for z in 0..10 {
+						let contained_count = blocks.iter().fold(0, |r, b| {
+							if b.point_inside((x, y, z)) {
+								r + 1
+							} else {
+								r
+							}
+						});
+						//println!("Testing ({},{},{}) {}", x, y, z, contained_count);
+						assert!(contained_count == 1);
+					}
 				}
 			}
 		}
 
 		println!("=== Check if remove-intersection works ===");
-		let block2 = Block::new_from_points((0, 0, 0), (2, 2, 2));
-		let mut blocks = block1.remove_intersection(&block2);
-		blocks.push(block2);
-		println!("New cubes:");
-		for b in blocks.iter() {
-			println!("{}    {:?}", b.point_inside(p), b);
-		}
-		println!("Verify every point is covered exactly once:");
-		for x in 0..10 {
-			for y in 0..10 {
-				for z in 0..10 {
-					let contained_count = blocks.iter().fold(0, |r, b| {
-						if b.point_inside((x, y, z)) {
-							r + 1
-						} else {
-							r
-						}
-					});
-					println!("Testing ({},{},{}) {}", x, y, z, contained_count);
-					assert!(contained_count == 1);
-				}
+		for p in points.iter() {
+			let block2 = Cuboid::new_from_points((0, 0, 0), (10, 10, 10));
+
+			println!("\n Remove cuboid {:?}", p);
+			let blocks =
+				block2.cube_minus(&Cuboid::new_from_points(p[0], p[1]));
+			for b in blocks.iter() {
+				println!("Result: {:?}", b);
 			}
 		}
 	} else {
@@ -266,5 +313,66 @@ fn main() {
 				}
 			})
 			.collect::<Vec<String>>();
+
+		//Parse to blocks
+		let mut blocks = Vec::new();
+		let number_regex = Regex::new(r"-?\d+").unwrap();
+		for line in lines {
+			println!("Parse command {}", line);
+			let matches = number_regex
+				.find_iter(line)
+				.map(|m| {
+					m.as_str().parse::<i64>().expect(
+						"Your regex matched some non-numbers, you morron",
+					)
+				})
+				.collect::<Vec<i64>>();
+			let p1 = (matches[0], matches[2], matches[4]);
+			let p2 = (matches[1], matches[3], matches[5]);
+			println!("Points: {:?} {:?}", p1, p2);
+			if line.starts_with("on") {
+				//create an on-block, that does not have intersections with any other block already existent
+				let mut to_add = Vec::new();
+
+				to_add.push(Cuboid::new_from_points(p1, p2));
+				for existing_block in blocks.iter() {
+					let mut to_add_buffer = Vec::new();
+					for b in to_add {
+						let mut new_blocks = b.cube_minus(existing_block);
+						to_add_buffer.append(&mut new_blocks);
+					}
+					to_add = to_add_buffer;
+				}
+				println!("Adding the following Cuboids:");
+				for c in to_add.iter() {
+					println!(" {:?}", c);
+				}
+				blocks.append(&mut to_add);
+			} else if line.starts_with("off") {
+				let mut new_blocks = Vec::new();
+				let off_block = Cuboid::new_from_points(p1, p2);
+
+				for block in blocks.iter() {
+					let mut blocks_after_deletion =
+						block.cube_minus(&off_block);
+					new_blocks.append(&mut blocks_after_deletion);
+				}
+				blocks = new_blocks;
+			}
+			println!("{}", blocks.iter().fold(0, |n, b| n + b.count_cubes()));
+		}
+
+		println!("{}", blocks.len());
+		blocks.retain(|b| {
+			b.start.0 <= 50
+				&& b.start.1 <= 50
+				&& b.start.2 <= 50
+				&& b.start.0 >= -50
+				&& b.start.1 >= -50
+				&& b.start.2 >= -50
+		});
+		println!("{}", blocks.len());
+		let number_of_on = blocks.iter().fold(0, |n, b| n + b.count_cubes());
+		println!("Number of activated Cubes is {}", number_of_on);
 	}
 }
