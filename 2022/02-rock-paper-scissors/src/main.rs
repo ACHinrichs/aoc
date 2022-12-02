@@ -46,20 +46,20 @@ fn main() {
         }
     } else if task == "2" {
         for l in lines {
-            let oponent = parse_char(l.chars().nth(0).unwrap());
+            let opponent = parse_char(l.chars().nth(0).unwrap());
             let own = match l.chars().nth(2).unwrap() {
-                'X' => ((oponent - 1) + 2) % 3 + 1,
-                'Y' => oponent,
-                'Z' => ((oponent - 1) + 1) % 3 + 1,
+                'X' => ((opponent - 1) + 2) % 3 + 1,
+                'Y' => opponent,
+                'Z' => ((opponent - 1) + 1) % 3 + 1,
                 _ => i64::MAX,
             };
 
             score += own;
-            if oponent == own {
+            if opponent == own {
                 score += 3;
-            } else if (oponent == 1 && own == 2)
-                || (oponent == 2 && own == 3)
-                || (oponent == 3 && own == 1)
+            } else if (opponent == 1 && own == 2)
+                || (opponent == 2 && own == 3)
+                || (opponent == 3 && own == 1)
             {
                 score += 6;
             }
