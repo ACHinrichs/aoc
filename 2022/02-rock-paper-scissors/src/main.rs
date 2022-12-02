@@ -28,8 +28,8 @@ fn main() {
         .lines()
         .map(|x| x.unwrap().to_string())
         .collect::<Vec<String>>();
+    let mut score = 0;
     if task == "1" {
-        let mut score = 0;
         for l in lines {
             let oponent = parse_char(l.chars().nth(0).unwrap());
             let own = parse_char(l.chars().nth(2).unwrap());
@@ -44,9 +44,28 @@ fn main() {
                 score += 6;
             }
         }
-        println!("Your score is {}", score);
     } else if task == "2" {
+        for l in lines {
+            let oponent = parse_char(l.chars().nth(0).unwrap());
+            let own = match l.chars().nth(2).unwrap() {
+                'X' => ((oponent - 1) + 2) % 3 + 1,
+                'Y' => oponent,
+                'Z' => ((oponent - 1) + 1) % 3 + 1,
+                _ => i64::MAX,
+            };
+
+            score += own;
+            if oponent == own {
+                score += 3;
+            } else if (oponent == 1 && own == 2)
+                || (oponent == 2 && own == 3)
+                || (oponent == 3 && own == 1)
+            {
+                score += 6;
+            }
+        }
     } else {
         panic!("Task unknown, please specify as first argument")
     }
+    println!("Your score is {}", score);
 }
