@@ -22,6 +22,17 @@ impl Section {
         }
     }
 
+    pub fn point_inside(&self, point: u64) -> bool {
+        return self.start <= point && self.end >= point;
+    }
+
+    pub fn some_overlap(&self, other: &Section) -> bool {
+        return self.point_inside(other.start)
+            || self.point_inside(other.end)
+            || other.point_inside(self.start)
+            || other.point_inside(self.end);
+    }
+
     pub fn complete_overlap(&self, other: &Section) -> bool {
         return (self.start <= other.start && self.end >= other.end)
             || (other.start <= self.start && other.end >= self.end);
@@ -49,7 +60,6 @@ fn main() {
                 .collect::<Vec<Section>>()
         })
         .collect::<Vec<Vec<Section>>>();
-    println!("{:?}", pairs);
     if task == "1" {
         pairs.retain(|x| x[0].complete_overlap(&x[1]));
         println!(
@@ -57,6 +67,11 @@ fn main() {
             pairs.len()
         );
     } else if task == "2" {
+        pairs.retain(|x| x[0].some_overlap(&x[1]));
+        println!(
+            "There are {} pairs where one section somehow overlapps the other",
+            pairs.len()
+        );
     } else {
         panic!("Task unknown, please specify as first argument")
     }
