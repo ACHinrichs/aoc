@@ -24,7 +24,3 @@ fn main() {
         panic!("Task unknown, please specify as first argument")
     }
 }
-
-fn main() {
-    println!("Hello, world!");
-}
