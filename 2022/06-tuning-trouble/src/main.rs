@@ -33,6 +33,17 @@ fn main() {
                 }
             }
         } else if task == "2" {
+            for i in 13..l.len() {
+                let cur = &mut l.chars().collect::<Vec<char>>()[i - 13..i + 1];
+                if !(1..cur.len()).any(|i| cur[i..].contains(&cur[i - 1])) {
+                    //Check for douplicate
+                    println!(
+                        "The first index to end a 14-letter non duplicate block is {}",
+                        i + 1
+                    );
+                    break;
+                }
+            }
         } else {
             panic!("Task unknown, please specify as first argument")
         }
