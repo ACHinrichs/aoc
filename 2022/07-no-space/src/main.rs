@@ -53,13 +53,24 @@ fn main() {
         .collect::<Vec<String>>();
 
     let mut dirs = Vec::new();
-    parse_directory(&mut lines.into_iter(), &mut dirs);
+    let total_size = parse_directory(&mut lines.into_iter(), &mut dirs);
     if task == "1" {
         println!(
             "The Sum of sizes of all directories <= 100000 is:\n{}",
             dirs.into_iter().filter(|d| *d <= 100000).sum::<u64>()
         );
     } else if task == "2" {
+        let max_size = 70000000;
+        let target_free = 30000000;
+        let unused = max_size - total_size;
+        let to_free = target_free - unused;
+        println!(
+            "The smallest directory to delete has a size of:\n{}",
+            dirs.into_iter()
+                .filter(|d| *d >= to_free)
+                .reduce(|a, b| std::cmp::min(a, b))
+                .unwrap()
+        );
     } else {
         panic!("Task unknown, please specify as first argument")
     }
