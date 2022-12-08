@@ -109,7 +109,72 @@ fn main() {
                 .unwrap()
         );
     } else if task == "2" {
+        let mut distances: Vec<Vec<u64>> = Vec::new();
+        for y in 0..trees.len() {
+            distances.push(Vec::new());
+            for x in 0..trees[y].len() {
+                let dist_len = distances.len();
+                let score: u64 = count_viewingdistance(&trees, x as isize, y as isize, 0, 1) as u64
+                    * count_viewingdistance(&trees, x as isize, y as isize, 1, 0) as u64
+                    * count_viewingdistance(&trees, x as isize, y as isize, -1, 0) as u64
+                    * count_viewingdistance(&trees, x as isize, y as isize, 0, -1) as u64;
+                distances[dist_len - 1].push(score);
+            }
+        }
+
+        //Visualize and find max:
+        // Does obviously not work, i need coffee
+        /*
+        let mut max = 0;
+        for y in 0..distances.len() {
+            for x in 0..distances[y].len() {
+                if distances[y][x] >= max {
+                    print!("{}", distances[y][x].to_string().red());
+                    max = distances[y][x];
+                } else {
+                    print!("{}", distances[y][x].to_string());
+                }
+            }
+            println!("");
+        }*/
+        dbg!(&distances);
+        println!(
+            "The largest viewing-score is {}",
+            distances
+                .into_iter()
+                .map(|l| l
+                    .into_iter()
+                    .reduce(|a, b| if a > b { a } else { b })
+                    .unwrap())
+                .reduce(|a, b| if a > b { a } else { b })
+                .unwrap()
+        )
     } else {
         panic!("Task unknown, please specify as first argument")
     }
+}
+
+fn count_viewingdistance(
+    trees: &Vec<Vec<u32>>,
+    x_start: isize,
+    y_start: isize,
+    x_inc: isize,
+    y_inc: isize,
+) -> usize {
+    let mut result = 0;
+    let mut x = x_start;
+    let mut y = y_start;
+    loop {
+        x += x_inc;
+        y += y_inc;
+
+        if y >= trees.len() as isize || y < 0 || x >= trees[y as usize].len() as isize || x < 0 {
+            break;
+        }
+        result += 1;
+        if trees[y as usize][x as usize] >= trees[y_start as usize][x_start as usize] {
+            break;
+        }
+    }
+    return result;
 }
