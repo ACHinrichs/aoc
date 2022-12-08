@@ -16,7 +16,7 @@ fn parse_char(c: char) -> i64 {
 }
 
 fn main() {
-    println!("AOC 2022, Day 01 – Calorie Counting\n");
+    println!("AOC 2022, Day 02 – Rock, Paper, Scisors\n");
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         panic!("Please supply the task and the problem-input to solve as arguments!");

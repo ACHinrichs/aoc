@@ -1,10 +1,11 @@
+use colored::*;
 use std::env;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
 fn main() {
-    println!("AOC 2022, Day 07 – No Space Left on Device\n");
+    println!("AOC 2022, Day 08 – Treetop Tree Houses\n");
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         panic!("Please supply the task and the problem-input to solve as arguments!");
@@ -17,8 +18,96 @@ fn main() {
         .map(|x| x.unwrap().to_string())
         .filter(|l| !l.starts_with("//"))
         .collect::<Vec<String>>();
-
+    let mut trees: Vec<Vec<u32>> = lines
+        .into_iter()
+        .map(|l| {
+            l.chars()
+                .map(|c| c.to_digit(10).unwrap() + 1)
+                .collect::<Vec<u32>>()
+        })
+        .collect();
+    // Add border of 0s:
     if task == "1" {
+        let len_lines_without_border = trees.len();
+        trees.insert(0, vec![0; len_lines_without_border]);
+        trees.push(vec![0; len_lines_without_border]);
+        trees = trees
+            .into_iter()
+            .map(|mut l| {
+                l.insert(0, 0);
+                l
+            })
+            .map(|mut l| {
+                l.push(0);
+                l
+            })
+            .collect();
+        let mut visi_map: Vec<Vec<bool>> = Vec::new();
+        // move from left to right and construct bool-map
+        for y in 0..trees.len() {
+            let mut max_height = 0;
+            visi_map.push(vec![false; trees[y].len()]);
+            for x in 0..trees[y].len() {
+                if trees[y][x] > max_height {
+                    max_height = trees[y][x];
+                    visi_map[y][x] = true;
+                }
+            }
+        }
+
+        // move from right to left
+        for y in 0..trees.len() {
+            let mut max_height = 0;
+            for x in (0..trees[y].len()).rev() {
+                if trees[y][x] > max_height {
+                    max_height = trees[y][x];
+                    visi_map[y][x] = true;
+                }
+            }
+        }
+
+        // move from top to bottom
+        for x in 0..trees[0].len() {
+            let mut max_height = 0;
+            for y in 0..trees.len() {
+                if trees[y][x] > max_height {
+                    max_height = trees[y][x];
+                    visi_map[y][x] = true;
+                }
+            }
+        }
+        // move from bottom to top
+        for x in 0..trees[0].len() {
+            let mut max_height = 0;
+            for y in (0..trees.len()).rev() {
+                if trees[y][x] > max_height {
+                    max_height = trees[y][x];
+                    visi_map[y][x] = true;
+                }
+            }
+        }
+
+        for y in 0..trees.len() {
+            for x in 0..trees[y].len() {
+                if trees[y][x] > 0 {
+                    if visi_map[y][x] {
+                        print!("{}", (trees[y][x] - 1).to_string().green());
+                    } else {
+                        print!("{}", (trees[y][x] - 1).to_string().hidden());
+                    }
+                }
+            }
+            println!("");
+        }
+        println!("green are visible");
+        println!(
+            "Number of visible Trees is:\n{}",
+            visi_map
+                .into_iter()
+                .map(|l| l.into_iter().filter(|visible| *visible).count())
+                .reduce(|a, b| a + b)
+                .unwrap()
+        );
     } else if task == "2" {
     } else {
         panic!("Task unknown, please specify as first argument")
