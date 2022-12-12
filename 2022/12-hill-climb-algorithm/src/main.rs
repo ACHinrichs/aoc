@@ -52,7 +52,7 @@ fn main() {
 
     // Add border of height z+2, so that it can not be reached, therefore we need not to worry about over and underflows of the array index
     let len_lines_without_border = heightmap[0].len();
-    let unreachable_height = 42;
+    let unreachable_height = 28;
     heightmap.insert(0, vec![unreachable_height; len_lines_without_border]);
     heightmap.push(vec![unreachable_height; len_lines_without_border]);
     heightmap = heightmap
@@ -73,13 +73,35 @@ fn main() {
     }
     dbg!(&heightmap);
     if task == "1" {
-        let (found, length) = bfs(start_x, start_y, end_x, end_y, &heightmap, &mut visited);
+        let (found, length) = bfs(
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            &heightmap,
+            &mut visited,
+            false,
+        );
         if found {
             println!("Found a path of size {}!", length);
         } else {
             println!("Did not find a path");
         }
     } else if task == "2" {
+        let (found, length) = bfs(
+            end_x,
+            end_y,
+            start_x,
+            start_y,
+            &heightmap,
+            &mut visited,
+            true,
+        );
+        if found {
+            println!("Found a path of size {}!", length);
+        } else {
+            println!("Did not find a path");
+        }
     } else {
         panic!("Task unknown, please specify as first argument")
     }
@@ -92,27 +114,42 @@ fn bfs(
     end_y: usize,
     heights: &Vec<Vec<u32>>,
     visited: &mut Vec<Vec<bool>>,
+    reversed: bool,
 ) -> (bool, u32) {
     let directions = [(1, 0), (-1, 0), (0, 1), (0, -1)];
     let mut queue = VecDeque::new();
     queue.push_back((start_x, start_y, 0));
     while queue.len() > 0 {
-        let (cur_x, cur_y, cur_length) = queue.pop_front().unwrap();
+        let (cur_x, cur_y, mut cur_length) = queue.pop_front().unwrap();
         //dbg!(cur_x, cur_y, end_x, end_y);
         print_maps(cur_x, cur_y, heights, visited);
-        if cur_x == end_x && cur_y == end_y {
-            return (true, cur_length);
+        if !reversed {
+            if cur_x == end_x && cur_y == end_y {
+                return (true, cur_length);
+            }
+        } else {
+            if heights[cur_y][cur_x] == heights[end_x][end_y] {
+                // yes, i know that that is bad code, cry me a river
+                return (true, cur_length);
+            }
+        }
+        if visited[cur_y][cur_x] {
+            continue;
         }
         visited[cur_y][cur_x] = true;
         let cur_height = heights[cur_y][cur_x];
         for (d_x, d_y) in directions {
             let new_x = (cur_x as isize + d_x) as usize;
             let new_y = (cur_y as isize + d_y) as usize;
-            if visited[new_y][new_x] {
-                continue;
-            }
-            if heights[new_y][new_x] <= cur_height + 1 {
-                queue.push_back((new_x, new_y, cur_length + 1));
+            if !visited[new_y][new_x] {
+                if !reversed && heights[new_y][new_x] <= cur_height + 1 {
+                    queue.push_back((new_x, new_y, cur_length + 1));
+                } else if reversed
+                    && heights[new_y][new_x] >= cur_height - 1
+                    && heights[new_y][new_x] <= 26
+                {
+                    queue.push_back((new_x, new_y, cur_length + 1));
+                }
             }
         }
     }
@@ -142,4 +179,19 @@ fn print_maps(cur_x: usize, cur_y: usize, heights: &Vec<Vec<u32>>, visited: &Vec
 #[cfg(not(debug_assertions))]
 fn print_maps(cur_x: usize, cur_y: usize, heights: &Vec<Vec<u32>>, visited: &Vec<Vec<bool>>) {
     return;
+}
+
+fn get_unvisited(
+    heights: &Vec<Vec<u32>>,
+    visited: &Vec<Vec<bool>>,
+    a: u32,
+) -> Option<(usize, usize)> {
+    for y in 0..visited.len() {
+        for x in 0..visited.len() {
+            if !visited[y][x] && heights[y][x] == a {
+                return Some((x, y));
+            }
+        }
+    }
+    return None;
 }
