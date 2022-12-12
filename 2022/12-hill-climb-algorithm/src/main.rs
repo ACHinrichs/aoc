@@ -71,7 +71,6 @@ fn main() {
     for i in 0..heightmap.len() {
         visited.push(vec![false; heightmap[i].len()]);
     }
-    dbg!(&heightmap);
     if task == "1" {
         let (found, length) = bfs(
             start_x,
