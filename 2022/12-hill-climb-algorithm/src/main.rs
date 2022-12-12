@@ -4,8 +4,13 @@ use std::env;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::time::{Duration, Instant};
+
 fn main() {
     println!("AOC 2022, Day 12 – Hill Climb Algorithm\n");
+    // Shave of the initial text, cause I'm a cheater :P
+    let timing_start = Instant::now();
+
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         panic!("Please supply the task and the problem-input to solve as arguments!");
@@ -18,6 +23,9 @@ fn main() {
         .map(|x| x.unwrap().to_string())
         .filter(|l| !l.starts_with("//"))
         .collect::<Vec<String>>();
+
+    let timing_after_fileread = Instant::now();
+
     let mut heightmap: Vec<Vec<u32>> = Vec::new();
 
     //Parse trees and save start and end location
@@ -104,6 +112,11 @@ fn main() {
     } else {
         panic!("Task unknown, please specify as first argument")
     }
+    println!(
+        "Execution time: {} µs\nExecution time without file-reading: {} µs",
+        timing_start.elapsed().as_micros(),
+        timing_after_fileread.elapsed().as_micros(),
+    );
 }
 
 fn bfs(
