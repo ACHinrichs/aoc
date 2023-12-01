@@ -28,67 +28,28 @@ fn main() {
             "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
         ]; // zero is only there to provide an offset, if the solution does not work I should check if some asshole added zero to the inout where it should not be parsed!
         for l in lines.iter_mut() {
-            let mut changes = true;
-            let mut precedence: i64 = 1;
-            let mut new_line = l.to_string();
+            let mut new_line = "".to_string();
+            let re = Regex::new(r"[0-9]|one|two|three|four|five|six|seven|eight|nine").unwrap(); //if all else fails, just slap it with a regex       println!("{} -> {}", l, new_line);
 
-            let re = Regex::new(r"[0-9]").unwrap(); //if all else fails, just slap it with a regex
-            let first_num_pos;
-            let maybematch = re.find(&new_line);
-            if maybematch.is_some() {
-                first_num_pos = maybematch.unwrap().start();
-            } else {
-                first_num_pos = new_line.len() + 1;
-            }
-
-            while changes {
-                changes = false;
-                let mut first_pos = (new_line.len() + 1); // GOES TITS-UP IF YOU USE USIZE::MAX
-                let mut first_precedence = first_pos as i64; // yes, we need this, because first_pos is not initilized correctly for our first comparison with precedence -1, it is correct that this is initially always positive
-                let mut replace_by = 0;
-                for (i, replace_string) in replace_strings.iter().enumerate() {
-                    let substr = new_line.find(replace_string);
-                    if substr.is_some() {
-                        //println!("Found {}", replace_string);
-                        //println!("{} {}", first_pos, replace_by);
-                        println!(
-                            "{} {} {}",
-                            (substr.unwrap() as i64) * precedence,
-                            (first_pos as i64) * precedence,
-                            (first_num_pos as i64) * precedence
-                        );
-                        if ((substr.unwrap() as i64) * precedence < first_precedence)
-                            && ((first_num_pos as i64) * precedence
-                                > (substr.unwrap() as i64) * precedence)
-                        {
-                            println!("Found {}", replace_string);
-                            first_precedence = (substr.unwrap() as i64) * precedence;
-                            first_pos = substr.unwrap();
-                            replace_by = i;
+            let mut offset = 0;
+            let mut find_optn = re.find(l);
+            while find_optn.is_some() {
+                let find = find_optn.unwrap();
+                offset += find.start() + 1;
+                if replace_strings.contains(&find.as_str()) {
+                    // do parsing
+                    for (i, r) in replace_strings.iter().enumerate() {
+                        if *r == find.as_str() {
+                            new_line += &i.to_string();
                         }
                     }
-                }
-                if first_pos < new_line.len() {
-                    // ensure we actually found soemthing
-                    println!(
-                        "Replacing {} by {}",
-                        &replace_strings[replace_by],
-                        &replace_by.to_string()
-                    );
-                    new_line =
-                        new_line.replacen(&replace_strings[replace_by], &replace_by.to_string(), 1);
-                    changes = true;
-                }
-                if precedence == 1 {
-                    // Quick hack, because the last digit in word form may overlap the
-                    // digit before it, so we change the order of precedence by this
-                    precedence = -1;
-                    changes = true;
                 } else {
-                    //changes = false;
+                    // just add it ot the new line
+                    new_line += find.as_str();
                 }
+                find_optn = re.find(&l[offset..]);
             }
-            println!("{} -> {}", l, new_line);
+            println!("{} \t -> \t {} ", l, new_line);
             new_lines.push(new_line);
         }
         lines = new_lines;
