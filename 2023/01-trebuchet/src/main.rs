@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::env;
 use std::fs::File;
 use std::io::BufRead;
@@ -30,6 +31,16 @@ fn main() {
             let mut changes = true;
             let mut precedence: i64 = 1;
             let mut new_line = l.to_string();
+
+            let re = Regex::new(r"[0-9]").unwrap(); //if all else fails, just slap it with a regex
+            let first_num_pos;
+            let maybematch = re.find(&new_line);
+            if maybematch.is_some() {
+                first_num_pos = maybematch.unwrap().start();
+            } else {
+                first_num_pos = new_line.len() + 1;
+            }
+
             while changes {
                 changes = false;
                 let mut first_pos = (new_line.len() + 1); // GOES TITS-UP IF YOU USE USIZE::MAX
@@ -40,12 +51,16 @@ fn main() {
                     if substr.is_some() {
                         //println!("Found {}", replace_string);
                         //println!("{} {}", first_pos, replace_by);
-                        //println!(
-                        //    "{} {}",
-                        //    (substr.unwrap() as i64) * precedence,
-                        //    (first_pos as i64) * precedence
-                        //);
-                        if (substr.unwrap() as i64) * precedence < first_precedence {
+                        println!(
+                            "{} {} {}",
+                            (substr.unwrap() as i64) * precedence,
+                            (first_pos as i64) * precedence,
+                            (first_num_pos as i64) * precedence
+                        );
+                        if ((substr.unwrap() as i64) * precedence < first_precedence)
+                            && ((first_num_pos as i64) * precedence
+                                > (substr.unwrap() as i64) * precedence)
+                        {
                             println!("Found {}", replace_string);
                             first_precedence = (substr.unwrap() as i64) * precedence;
                             first_pos = substr.unwrap();
@@ -67,7 +82,8 @@ fn main() {
                 if precedence == 1 {
                     // Quick hack, because the last digit in word form may overlap the
                     // digit before it, so we change the order of precedence by this
-                    precedence = -1
+                    precedence = -1;
+                    changes = true;
                 } else {
                     //changes = false;
                 }
