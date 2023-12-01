@@ -61,7 +61,7 @@ fn main() {
                         &replace_by.to_string()
                     );
                     new_line =
-                        new_line.replace(&replace_strings[replace_by], &replace_by.to_string());
+                        new_line.replacen(&replace_strings[replace_by], &replace_by.to_string(), 1);
                     changes = true;
                 }
                 if precedence == 1 {
