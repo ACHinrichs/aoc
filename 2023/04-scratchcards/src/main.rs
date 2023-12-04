@@ -8,6 +8,7 @@ struct Scratchcard {
     id: u64,
     winning_numbers: HashSet<u64>,
     numbers_we_have: HashSet<u64>,
+    copies: u64,
 }
 
 impl Scratchcard {
@@ -16,6 +17,7 @@ impl Scratchcard {
             id: 0,
             winning_numbers: HashSet::new(),
             numbers_we_have: HashSet::new(),
+            copies: 1,
         };
         //The parsing is not very nice, but will do the trick
         res.id = line
@@ -48,7 +50,7 @@ impl Scratchcard {
         return res;
     }
 
-    fn get_points(&self) -> u64 {
+    fn get_points(&mut self) -> u64 {
         let winning_cnt = self.get_matching_cards().len() as u32;
         if winning_cnt == 0 {
             return 0;
@@ -84,11 +86,27 @@ fn main() {
         println!(
             "The number of points is {}",
             scratchcards
-                .iter()
+                .into_iter()
                 .map(Scratchcard::get_points)
                 .sum::<u64>()
         );
     } else if task == "2" {
+        // process cards:
+        for i in 0..scratchcards.len() {
+            for j in 1..(scratchcards[i].get_matching_cards().len() + 1) {
+                // j starts with 1!
+                // add c.count copies of the following cards
+                if i + j >= scratchcards.len() {
+                    continue; // dont go over the end
+                }
+                scratchcards[i + j].copies = scratchcards[i + j].copies + scratchcards[i].copies;
+            }
+        }
+
+        println!(
+            "The number of cards is {}",
+            scratchcards.iter().map(|c| c.copies).sum::<u64>()
+        );
     } else {
         panic!("Task unknown, please specify as first argument")
     }
