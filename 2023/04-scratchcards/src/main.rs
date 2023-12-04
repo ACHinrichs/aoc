@@ -28,49 +28,41 @@ impl Scratchcard {
             .unwrap()
             .parse()
             .unwrap();
-        res.winning_numbers = line
-            .split(": ")
-            .nth(1)
-            .unwrap()
-            .split("|")
-            .nth(0)
-            .unwrap()
-            .split(" ")
-            .filter(|s| !s.is_empty()) // the nice alignment of 1-digit numbers breaks the code from day 2
-            .map(|x| {
-                x.parse::<u64>()
-                    .expect("You tried to parse something thats not a number")
-            })
-            .collect();
-        res.numbers_we_have = line
-            .split(": ")
-            .nth(1)
-            .unwrap()
-            .split("|")
-            .nth(1) // Select second part
-            .unwrap()
-            .split(" ")
-            .filter(|s| !s.is_empty()) // the nice alignment of 1-digit numbers breaks the code from day 2
-            .map(|x| {
-                x.parse::<u64>()
-                    .expect("You tried to parse something thats not a number")
-            })
-            .collect();
+        let parse_numbers = |a| {
+            line.split(": ")
+                .nth(1)
+                .unwrap()
+                .split("|")
+                .nth(a) // Select second part
+                .unwrap()
+                .split(" ")
+                .filter(|s| !s.is_empty()) // the nice alignment of 1-digit numbers breaks the code from day 2
+                .map(|x| {
+                    x.parse::<u64>()
+                        .expect("You tried to parse something thats not a number")
+                })
+                .collect()
+        };
+        res.winning_numbers = parse_numbers(0);
+        res.numbers_we_have = parse_numbers(1);
         return res;
     }
 
     fn get_points(&self) -> u64 {
-        let winning_cnt = self
-            .numbers_we_have
-            .iter()
-            .filter(|n| self.winning_numbers.contains(n))
-            .collect::<Vec<&u64>>()
-            .len() as u32;
+        let winning_cnt = self.get_matching_cards().len() as u32;
         if winning_cnt == 0 {
             return 0;
         } else {
             return 2_u64.pow(winning_cnt - 1);
         }
+    }
+
+    fn get_matching_cards(&self) -> Vec<&u64> {
+        return self
+            .numbers_we_have
+            .iter()
+            .filter(|n| self.winning_numbers.contains(n))
+            .collect::<Vec<&u64>>();
     }
 }
 
