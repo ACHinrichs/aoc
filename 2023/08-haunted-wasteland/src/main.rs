@@ -73,40 +73,68 @@ fn main() {
             steps, target, start
         );
     } else if task == "2" {
-        let mut cur: Vec<&str> = sorted_nodes
+        let starts: Vec<&str> = sorted_nodes
             .into_iter()
             .filter(|n| n.chars().last().unwrap() == 'A')
             .collect();
-        println!("Navigating on {} nodes in parallel", cur.len());
-        let mut steps = 0;
-        while !cur.iter().all(|n| n.chars().last().unwrap() == 'Z') {
-            let next_step = instructions[steps % instructions.len()]; //instruction roll over
+        let mut periods: Vec<HashMap<_, _>> = Vec::new();
 
-            // println!("{}", cur);
-            let mut next_nodes = Vec::new();
-            for c in cur {
-                let cur_node = nodes.get(c).expect("Current node does not exist, wth?");
-                next_nodes.push(match next_step {
-                    'L' => cur_node.left,
-                    'R' => cur_node.right,
-                    _ => "Non-Exisiting Node",
-                });
+        println!("Navigating on {} nodes in parallel", starts.len());
+        for c in starts {
+            println!("Navigating from Node {}", c);
+            let mut steps = 0;
+            let mut cur_node = c;
+            periods.push(HashMap::new());
+            loop {
+                // that is intentional
+                //instruction roll over
+                let next_step = instructions[steps % instructions.len()];
+
+                // println!("{}", cur);
+                cur_node = nodes
+                    .get(match next_step {
+                        'L' => {
+                            nodes
+                                .get(cur_node)
+                                .expect("Current node does not exist, wth?")
+                                .left
+                        }
+                        'R' => {
+                            nodes
+                                .get(cur_node)
+                                .expect("Current node does not exist, wth?")
+                                .right
+                        }
+                        _ => "Non-Exisiting Node",
+                    })
+                    .expect("Next node does not exist, wth?")
+                    .name;
+                steps = steps + 1;
+
+                // Write into HashSet, if node is a target node
+                if cur_node.chars().last().unwrap() == 'Z' {
+                    // Abort if
+                    // - steps % instruction.len() is already in periods, AND we are on the same node as we were then
+                    let mut abort = false;
+                    let last_ind = periods.len() - 1;
+                    for (k, v) in periods[last_ind].iter() {
+                        if (*v == cur_node)
+                            && (k % instructions.len() == steps % instructions.len())
+                        {
+                            abort = true
+                        }
+                    }
+                    if abort {
+                        break;
+                    } else {
+                        periods[last_ind].insert(steps, cur_node);
+                        println!("Found node {} after {} steps", cur_node, steps);
+                    }
+                }
             }
-            //println!("{:?}", next_nodes);
-            //assert!(
-            //    next_nodes.iter().all(|s| *s != "Non-Existing Node"),
-            //    "There is an error"
-            //);
-            cur = next_nodes;
-            steps += 1;
-            if steps % 1000 == 0 {
-                println!("Executed Step {}", steps)
-            }
+            println!("Reached periodicity after {} steps", steps);
+            println!("To get your result, use wolfram alpha to find the least common multiple of the steps above")
         }
-        println!(
-            "We needed {} Steps to reach a state where all nodes end in Z",
-            steps
-        );
     } else {
         panic!("Task unknown, please specify as first argument")
     }
