@@ -1,9 +1,9 @@
+use memoize::memoize;
 use std::env;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::thread;
-
 /* Function to bruteforce the nubmer of possible solutions for each line.
 Works in the following way:
 - if the first group from the groups vec has size 0, remove it, got to next recrusion
@@ -12,6 +12,7 @@ Works in the following way:
 -- if no ? is found, and groupsize matches: remove group both from line and groups, recurse
 -- otherwise abort recursion
  */
+#[memoize]
 fn bruteforce_line_combinations(line: Vec<char>, groups: Vec<usize>) -> u64 {
     //println!("{:?} {:?}", line, groups);
     if groups.len() == 0 {
@@ -22,10 +23,15 @@ fn bruteforce_line_combinations(line: Vec<char>, groups: Vec<usize>) -> u64 {
         } else {
             // we have used up all groups, and the remaining line only has '.' and '?'
             // -> valid solution, return 1
+            //println!("abort with 1");
             return 1;
         }
     } else if line.len() == 0 {
         // We have groups, but no more text
+        // -> invalid solution, return 0
+        return 0;
+    } else if line.len() <= (groups.iter().sum::<usize>() + groups.len()) {
+        // Heuristic, maybe this helps
         // -> invalid solution, return 0
         return 0;
     } else if groups[0] == 0 {
@@ -136,15 +142,9 @@ fn main() {
     let mut i = 0;
     let len = lines.len();
     for (template, groups) in lines {
+        println!("{:?} {:?}", template.clone(), groups.clone());
         let count = bruteforce_line_combinations(template.clone(), groups.clone());
-        println!(
-            "{}/{}: {:?} {:?} {}",
-            i,
-            len,
-            template.clone(),
-            groups.clone(),
-            count
-        );
+        println!("{}/{}: {}", i, len, count);
         sum += count;
         i += 1;
     }
