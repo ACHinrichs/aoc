@@ -92,7 +92,7 @@ fn main() {
         .collect::<Vec<Game>>();
 
     if task == "1" {
-        let res: u64 = games
+        let res: Vec<u64> = games
             .iter()
             .filter(|g| {
                 g.dice_sets
@@ -100,8 +100,9 @@ fn main() {
                     .all(|s| s.red <= 12 && s.green <= 13 && s.blue <= 14)
             })
             .map(|g| g.game_id)
-            .sum();
-        println!("The Sum of the IDs of Games that can be played wth 12 red, 13 green and 14 blue dice is {}", res);
+            .collect();
+        println!("Valid games are: {:?}", res);
+        println!("The Sum of the IDs of Games that can be played wth 12 red, 13 green and 14 blue dice is {}", res.iter().sum::<u64>());
     } else if task == "2" {
         let res: u64 = games
             .iter()
