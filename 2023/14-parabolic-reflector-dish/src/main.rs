@@ -92,27 +92,12 @@ fn main() {
                 );
                 let mut x = num_cycles;
                 while i + (i - prev_states.get(&lines).unwrap()) * (x as u64) >= num_cycles {
-                    if x % 100 == 0 {
-                        println!("{}", x);
-                    }
                     x = x / 2;
                 }
-                println!("{}", x);
-                //while i + (i - prev_states.get(&lines).unwrap()) * (x + 100) < num_cycles {
-                //    if x % 10000 == 32 {
-                //        println!("{}", x);
-                //    }
-                //    x = x + 10;
-                //}
-                i = i + (i - prev_states.get(&lines).unwrap()) * x; // skip as many of those cycles as possible
 
-                //continue;
+                i = i + (i - prev_states.get(&lines).unwrap()) * x;
 
-                //i = i
-                //    + ((num_cycles - i) / (i - prev_states.get(&lines).unwrap()))
-                //        * (num_cycles - i) as u64;
-                println!("{}", i);
-                prev_states.clear();
+                prev_states.clear(); // small little hack
             }
             i = i + 1;
         }
